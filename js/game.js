@@ -156,7 +156,7 @@ class Game {
     for (var y = 0; y < height; ++y) {
       (this.map[y] = []).length = width;
       for (var x = 0; x < width; ++x) {
-        // This part is hardcoded to 2 bots and set locations. Need to change later.
+        // TODO: This part is hardcoded to 2 bots and set locations. Need to change later.
         if (y == 1 && x >= 1 && x <= width - 2) {
           this.map[y][x] = [new Cell(bots[0].getId(), new Skeleton())];
         } else if (y == height - 2 && x >= 1 && x <= width - 2) {
@@ -167,59 +167,69 @@ class Game {
       }
     }
 
+    this.canvas = new Canvas(width, height);
+
     this.runGame();
   }
 
-  // Runs the game.
   runGame() {
     var turns = 0;
     var gameEnded = false;
-    for (; turns < 10 * Math.sqrt(this.width * this.height) && !gameEnded; ++turns) {
-      var dupedMap = this.cloneMap();
+    var game = this;
+    var dupedMap = game.cloneMap();
+    this.canvas.drawMap(dupedMap);
+    var interval = setInterval(function() {
       var botsActions = [];
 
       // Grab all the bots actions.
-      for (var i = 0; i < this.bots.length; ++i) {
-        botsActions.push(this.bots[i].computeNextMove(dupedMap));
+      for (var i = 0; i < game.bots.length; ++i) {
+        botsActions.push(game.bots[i].computeNextMove(dupedMap));
       }
 
-      this.updateMap(botsActions, dupedMap);
-      this.resolveConflicts();
-      this.computeDamages();
-      this.removeTheDead();
-      gameEnded = this.didGameEnd(turns);
-    }
+      game.updateMap(botsActions, dupedMap);
+      game.resolveConflicts();
+      game.computeDamages();
+      game.removeTheDead();
+      gameEnded = game.didGameEnd(++turns);
 
-    // Max turns reached. Winner will be determined by sum of hp and attack they have.
-    if (!gameEnded) {
-      var botPoints = [];
-      botPoints.length = this.bots.length;
-      botPoints.fill(0);
-      for (var y = 0; y < this.height; ++y) {
-        for (var x = 0; x < this.width; ++x) {
-          var cell = this.map[y][x][0];
-          botPoints[cell.getId() - 1] += cell.getAttack() + cell.getLife();
+      if (turns >= 10 * Math.sqrt(game.width * game.height) || gameEnded) {
+        clearInterval(interval);
+
+        // Max turns reached. Winner will be determined by sum of hp and attack they have.
+        if (!gameEnded) {
+          var botPoints = [];
+          botPoints.length = game.bots.length;
+          botPoints.fill(0);
+          for (var y = 0; y < game.height; ++y) {
+            for (var x = 0; x < game.width; ++x) {
+              var cell = game.map[y][x][0];
+              botPoints[cell.getId() - 1] += cell.getAttack() + cell.getLife();
+            }
+          }
+
+          console.log('The game has ended after ' + turns + ' turns. Here are the following scores:');
+          var winners = [];
+          var maxPoints = 0;
+          for (var i = 0; i < botPoints.length; ++i) {
+            console.log('Bot ' + game.bots[i].getId() + ' scored ' + botPoints[i] + ' points!');
+            if (maxPoints < botPoints[i]) {
+              winners = [game.bots[i].getId()];
+              maxPoints = botPoints[i];
+            } else if (maxPoints == botPoints[i]) {
+              winners.push(game.bots[i].getId());
+            }
+          }
+          if (winners.length > 1) {
+            console.log('Bots ' + winners + ' all tie for first!');
+          } else {
+            console.log('Bot ' + winners[0] + ' wins!');
+          }
         }
       }
 
-      console.log('The game has ended after ' + turns + ' turns. Here are the following scores:');
-      var winners = [];
-      var maxPoints = 0;
-      for (var i = 0; i < botPoints.length; ++i) {
-        console.log('Bot ' + this.bots[i].getId() + ' scored ' + botPoints[i] + ' points!');
-        if (maxPoints < botPoints[i]) {
-          winners = [this.bots[i].getId()];
-          maxPoints = botPoints[i];
-        } else if (maxPoints == botPoints[i]) {
-          winners.push(this.bots[i].getId());
-        }
-      }
-      if (winners.length > 1) {
-        console.log('Bots ' + winners + ' all tie for first!');
-      } else {
-        console.log('Bot ' + winners[0] + ' wins!');
-      }
-    }
+      dupedMap = game.cloneMap();
+      game.canvas.drawMap(dupedMap);
+    }, 1000);
   }
 
   // Aggregate all the actions into the map.
@@ -295,7 +305,7 @@ class Game {
           this.takeDamage(cellToDamage, y + 1, x + 1);
           this.takeDamage(cellToDamage, y - 1, x - 1);
           this.takeDamage(cellToDamage, y - 1, x);
-          this.takeDamage(cellToDamage, y + 1, x + 1);
+          this.takeDamage(cellToDamage, y - 1, x + 1);
           this.takeDamage(cellToDamage, y, x - 1);
           this.takeDamage(cellToDamage, y, x + 1);
         }
@@ -361,6 +371,68 @@ class Game {
     var attackerCell = this.map[y][x][0];
     if (cellToDamage.getId() != attackerCell.getId()) {
       cellToDamage.takeDamage(attackerCell.getAttack());
+    }
+  }
+}
+
+class Canvas {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
+    this.canvas = document.getElementById('game');
+    this.ctx = this.canvas.getContext('2d');
+    this.xStep = this.canvas.width / width;
+    this.yStep = this.canvas.height / height;
+  }
+
+  drawMap(map) {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.strokeStyle = '#E4E4E4';
+    this.ctx.beginPath();
+    for (var x = this.xStep; x < this.canvas.width; x += this.xStep) {
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, 400);
+    }
+    for (var y = this.yStep; y < this.canvas.height; y += this.yStep) {
+      this.ctx.moveTo(0, y);
+      this.ctx.lineTo(400, y);
+    }
+    this.ctx.closePath();
+    this.ctx.stroke();
+
+    for (var y = 0; y < map.length; ++y) {
+      for (var x = 0; x < map[y].length; ++x) {
+        // TODO: This part is hardcoded to 2 bots.
+        var cell = map[y][x];
+        if (cell.getId() != 0) {
+          this.ctx.beginPath();
+          var middleX = x * this.xStep + this.xStep / 2;
+          var middleY = y * this.yStep + this.yStep / 2;
+          this.ctx.arc(
+            middleX,
+            middleY,
+            Math.min(this.xStep / 3, this.yStep / 3),
+            0,
+            2 * Math.PI
+          );
+          this.ctx.closePath();
+
+          switch (cell.getId()) {
+            case 1:
+              this.ctx.fillStyle = '#FF0030';
+              this.ctx.fill();
+              break;
+            case 2:
+              this.ctx.fillStyle = '#0032FF';
+              this.ctx.fill();
+              break;
+          }
+
+          this.ctx.font = '18px Arial';
+          this.ctx.fillStyle = '#E4E4E4';
+          this.ctx.fillText(cell.getLife(), middleX - 5, middleY + 6);
+        }
+      }
     }
   }
 }
