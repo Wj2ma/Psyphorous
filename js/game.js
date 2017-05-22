@@ -131,6 +131,23 @@ class Game {
     this.width = width;
     this.height = height;
 
+    var initErrors = false;
+    if (width < 4 || width > 100) {
+      console.log('4 <= width <= 100');
+      initErrors = true;
+    }
+    if (height < 4 || height > 100) {
+      console.log('4 <= height <= 100');
+      initErrors = true;
+    }
+    if (bots.length != 2) {
+      console.log('Sorry, only 2 bots are supported right now');
+      initErrors = true;
+    }
+    if (initErrors) {
+      return;
+    }
+
     for (var i = 0; i < bots.length; ++i) {
       this.bots[i].init(i + 1);
     }
