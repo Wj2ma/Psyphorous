@@ -1,2 +1,2 @@
-# Syphorous
+# Psyphorous
 Swarm AI game
