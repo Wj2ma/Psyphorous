@@ -1,3 +1,90 @@
+class Bot {
+  init(id) {
+    this.id = id;
+  }
+
+  getId() {
+    return this.id;
+  }
+
+  computeNextMove(map) {
+    return [];
+  }
+}
+
+class RandomBot extends Bot {
+  computeNextMove(map) {
+    let moves = [];
+    for (let y = 0; y < map.length; ++y) {
+      for (let x = 0; x < map[y].length; ++x) {
+        let cell = map[y][x];
+        if (cell.getBotId() == this.id) {
+          moves.push(new Action(x, y, Math.floor(Math.random() * 5)));
+        }
+      }
+    }
+    return moves;
+  }
+}
+
+class RandomBot2 extends Bot {
+  computeNextMove(map) {
+    let moves = [];
+    let availMoves = [Move.STAY, Move.UP, Move.DOWN];
+    for (let y = 0; y < map.length; ++y) {
+      for (let x = 0; x < map[y].length; ++x) {
+        let cell = map[y][x];
+        if (cell.getBotId() == this.id) {
+          moves.push(new Action(x, y, availMoves[Math.floor(Math.random() * 3)]));
+        }
+      }
+    }
+    return moves;
+  }
+}
+
+class UpDownBot extends Bot {
+  constructor(move) {
+    super();
+    this.move = move;
+  }
+
+  computeNextMove(map) {
+    let moves = [];
+    for (let y = 0; y < map.length; ++y) {
+      for (let x = 0; x < map[y].length; ++x) {
+        let cell = map[y][x];
+        if (cell.getBotId() == this.id) {
+          moves.push(new Action(x, y, this.move));
+        }
+      }
+    }
+    return moves;
+  }
+}
+
+class UpDownBot2 extends Bot {
+  constructor(move) {
+    super();
+    this.turn = 0;
+    this.move = move;
+  }
+
+  computeNextMove(map) {
+    let moves = [];
+    for (let y = 0; y < map.length; ++y) {
+      for (let x = 0; x < map[y].length; ++x) {
+        let cell = map[y][x];
+        if (cell.getBotId() == this.id) {
+          moves.push(new Action(x, y, this.turn == 0 && x % 2 == 0 ? Move.STAY : this.move));
+        }
+      }
+    }
+    ++this.turn;
+    return moves;
+  }
+}
+
 const Move = {
   STAY: 0,
   UP: 1,
@@ -31,8 +118,8 @@ class Creature {
 class Skeleton extends Creature {
   constructor(id) {
     super(id);
-    this.attack = 1;
-    this.hp = 5;
+    this.attack = 2;
+    this.hp = 3;
   }
 
   getAttack() {
@@ -109,29 +196,6 @@ class Action {
 
   getMove() {
     return this.move;
-  }
-}
-
-class Bot {
-  init(id) {
-    this.id = id;
-  }
-
-  getId() {
-    return this.id;
-  }
-
-  computeNextMove(map) {
-    let moves = [];
-    for (let y = 0; y < map.length; ++y) {
-      for (let x = 0; x < map[y].length; ++x) {
-        let cell = map[y][x];
-        if (cell.getBotId() == this.id) {
-          moves.push(new Action(x, y, Math.floor(Math.random() * 5)));
-        }
-      }
-    }
-    return moves;
   }
 }
 
@@ -290,22 +354,52 @@ class Game {
   resolveConflicts() {
     for (let y = 0; y < this.height; ++y) {
       for (let x = 0; x < this.width; ++x) {
-        let cells = this.map[y][x];
+        let cells = this.map[y][x].filter(cell => cell != NEUTRAL_CELL);
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Test Rule #1:
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Everyone takes damage from everyone until there is a last man standing, or everyone dies.
-        while (cells.length > 1) {
-          for (let i = 0; i < cells.length; ++i) {
-            let cellToDamage = cells[i];
-            for (let j = 0; j < cells.length; ++j) {
-              let attackerCell = cells[j];
-              if (cellToDamage != attackerCell) {
-                cellToDamage.takeDamage(attackerCell.getAttack());
-              }
+        // while (cells.length > 1) {
+        //   for (let cellToDamage of cells) {
+        //     for (let attackerCell of cells) {
+        //       if (cellToDamage != attackerCell) {
+        //         cellToDamage.takeDamage(attackerCell.getAttack());
+        //       }
+        //     }
+        //   }
+        //   cells = cells.filter(function(cell) {
+        //     return cell.getLife() > 0;
+        //   });
+        // }
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Test Rule #2:
+        // The creature with the highest hp wins regardless of damage. It's hp will be subtracted from the second
+        // highest creature's hp.
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        if (cells.length > 1) {
+          let healthiestCreature = null;
+          let secondHealthiest = null;
+          for (let cell of cells) {
+            if (healthiestCreature == null) {
+              healthiestCreature = cell;
+            } else if (healthiestCreature.getLife() <= cell.getLife()) {
+              secondHealthiest = healthiestCreature;
+              healthiestCreature = cell;
+            } else if (secondHealthiest == null || secondHealthiest.getLife() < cell.getLife()) {
+              secondHealthiest = cell;
             }
           }
-          cells = cells.filter(function(cell) {
-            return cell.getLife() > 0;
-          });
+
+          if (healthiestCreature.getLife() == secondHealthiest.getLife()) {
+            cells = [NEUTRAL_CELL];
+          } else {
+            healthiestCreature.takeDamage(secondHealthiest.getLife());
+            cells = [healthiestCreature];
+          }
         }
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         if (cells.length == 0) {
           cells.push(NEUTRAL_CELL);
