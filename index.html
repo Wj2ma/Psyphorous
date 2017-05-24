@@ -10,9 +10,45 @@
     <script src="js/game.js"></script>
     <h1>Hello World! Open the console.</h1>
     <ol>
-        <li>Initialize a new game object with an array of bots (I have a default new Bot() implementation),
-            a height, and a width.</li>
+        <li>
+            Initialize a new game object with an array of bots (I have a default new Bot() implementation), a height,
+            and a width.
+        </li>
         <li>See the results.</li>
+    </ol>
+
+    <h2>Game Rules</h2>
+    <ol>
+        <li>Each player starts with the same creatures.</li>
+        <li>The goal is to destroy all opponents creatures.</li>
+        <li>
+            Each creature has an attack power, and a health. The health will be shown in the UI, and the attack is
+            hardcoded to 2 for now.
+        </li>
+        <li>
+            On every turn, there are 3 phases: the movement phase, the duel phase, and the attacking phase. Phases are
+            run sequentially in that order.
+        </li>
+        <li>During the movement phase, every creature can either move 1 unit up/right/down/left or stay.</li>
+        <li>
+            After the movement phase, we go into the duel phase. A duel happens when 2 or more creatures occupy the same
+            block, regardless of their alliance (creatures are bad tempered, so if anyone is in their personal space,
+            they need to settle it).
+        </li>
+        <li>
+            During a duel, the creature with the highest life is the strongest and will win against all others. It will
+            lose the amount of hp equal to the second highest life. If there is a tie, everyone dies.
+        </li>
+        <li>
+            After all duels are settled, the attacking phase begins. In this phase, every creature will deal its damage
+            to all adjacent enemies. An enemy is adjacent if it is 1 unit away from the creature, including diagonals.
+        </li>
+        <li>
+            A winner is declared when there is either one player left, or no players left. However, if the number of
+            turns exceeds 10 * sqrt(width * height), where width and height are the width and heights of the grid, then
+            the game ends as well, and the player with the most hp + damage across all his or her creatures will be
+            victorious.
+        </li>
     </ol>
 
     <canvas id="game" width="400" height="400" style="border:2px solid #E4E4E4;"></canvas>
