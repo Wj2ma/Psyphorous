@@ -135,6 +135,48 @@ class Skeleton extends Creature {
   }
 }
 
+class Insect {
+  constructor(id) {
+    this.id = id;
+    this.attack = 0;
+    this.hp = 0;
+  }
+
+  getId() {
+    return this.id;
+  }
+
+  getAttack() {
+    return this.attack;
+  }
+
+  getLife() {
+    return this.hp;
+  }
+
+  takeDamage(damage) {
+    this.hp -= damage;
+  }
+}
+
+class QueenBee extends Insect {
+  constructor(id) {
+    super(id);
+  }
+
+  takeDamage(damage) {
+    this.hp += damage * 2;
+  }
+}
+
+class Bee extends Insect {
+  constructor(id) {
+    super(id);
+    this.hp = 1;
+    this.attack = 1;
+  }
+}
+
 class Cell {
   constructor(botId, creature) {
     this.botId = botId;
