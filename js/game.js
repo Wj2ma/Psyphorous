@@ -93,53 +93,19 @@ const Move = {
   LEFT: 4
 };
 
-class Creature {
-  constructor(id) {
-    this.id = id;
-  }
-
-  getId() {
-    return this.id;
-  }
-
-  getAttack() {
-    return 0;
-  }
-
-  getLife() {
-    return 0;
-  }
-
-  takeDamage(damage) {
-
-  }
-}
-
-class Skeleton extends Creature {
-  constructor(id) {
-    super(id);
-    this.attack = 2;
-    this.hp = 3;
-  }
-
-  getAttack() {
-    return this.attack;
-  }
-
-  getLife() {
-    return this.hp;
-  }
-
-  takeDamage(damage) {
-    this.hp -= damage;
-  }
-}
+const Face = {
+  UP: 0,
+  RIGHT: 1,
+  DOWN: 2,
+  LEFT: 3,
+};
 
 class Insect {
-  constructor(id) {
+  constructor(id, face) {
     this.id = id;
-    this.attack = 0;
-    this.hp = 0;
+    this.count = 1;
+    this.face = face;
+    this.pollen = 0;
   }
 
   getId() {
@@ -147,67 +113,120 @@ class Insect {
   }
 
   getAttack() {
-    return this.attack;
+    return 0;
   }
 
-  getLife() {
-    return this.hp;
+  getCount() {
+    return this.count;
   }
 
   takeDamage(damage) {
-    this.hp -= damage;
+    this.count -= damage;
+  }
+
+  changeFace(face) {
+    this.face = face;
+  }
+
+  // Default action is do nothing.
+  collectPollen(amount) {
+
   }
 }
 
 class QueenBee extends Insect {
-  constructor(id) {
-    super(id);
+  constructor(id, face) {
+    super(id, face);
   }
 
   takeDamage(damage) {
-    this.hp += damage * 2;
+    this.pollen -= damage * 10;
+  }
+
+  takePollen(amount) {
+    this.pollen += amount;
+  }
+
+  spawnBees() {
+    let bees = Math.floor(this.pollen / 5);
+    this.pollen %= 5;
+    return bees;
   }
 }
 
 class Bee extends Insect {
-  constructor(id) {
-    super(id);
-    this.hp = 1;
-    this.attack = 1;
+  // faces is a dictionary of faces and their corresponding count of bees facing that direction.
+  constructor(id, face, amount) {
+    super(id, face);
+    this.count = amount || this.count;
+  }
+
+  getAttack() {
+    return this.count;
+  }
+
+  collectPollen(amount) {
+    this.pollen = Math.max(this.count * 3, this.pollen + amount);
+  }
+
+  depositPollen() {
+    let amount = this.pollen;
+    this.pollen = 0;
+    return amount;
+  }
+}
+
+class Wasp extends Insect {
+  constructor(id, face, count) {
+    super(id, face);
+    this.count = count;
+  }
+
+  getAttack() {
+    return this.count * 2;
+  }
+
+  takeDamage(damage) {
+    this.count -= Math.floor(damage / 2);
   }
 }
 
 class Cell {
-  constructor(botId, creature) {
+  constructor(botId, potency, insect) {
     this.botId = botId;
-    this.creature = creature;
+    this.potency = potency;
+    this.insect = insect;
   }
 
-  getCreatureId() {
-    return this.creature.getId();
+  getInsectId() {
+    return this.insect.getId();
   }
 
   getBotId() {
     return this.botId;
   }
 
-  getCreature() {
-    return this.creature;
+  getInsect() {
+    return this.insect;
+  }
+
+  getPotency() {
+    return this.potency;
   }
 
   // TODO: Refactor this crud.
   getAttack() {
-    if (this.creature) {
-      return this.creature.getAttack();
+    if (this.insect) {
+      return this.insect.getAttack();
     } else {
       return 0;
     }
   }
 
   // TODO: Refactor this crud.
-  getLife() {
-    if (this.creature) {
-      return this.creature.getLife();
+  getCount() {
+    if (this.insect) {
+      return this.insect.getCount();
     } else {
       return 0;
     }
@@ -215,17 +234,19 @@ class Cell {
 
   // TODO: Refactor this crud.
   takeDamage(damage) {
-    if (this.creature) {
-      this.creature.takeDamage(damage);
+    if (this.insect) {
+      this.insect.takeDamage(damage);
     }
   }
 }
 
 class Action {
-  constructor(x, y, move) {
+  constructor(x, y, move, face, amount) {
     this.x = x;
     this.y = y;
     this.move = move;
+    this.face = face;
+    this.amount = amount;
   }
 
   getX() {
@@ -239,10 +260,33 @@ class Action {
   getMove() {
     return this.move;
   }
+
+  getFace() {
+    return this.face;
+  }
+
+  getAmount() {
+    return this.amount;
+  }
 }
 
 const NEUTRAL_ID = 0;
-const NEUTRAL_CELL = new Cell(NEUTRAL_ID, null);
+const NEUTRAL_CELL = new Cell(NEUTRAL_ID, 0, null);
+const FLOWER = new Cell(NEUTRAL_ID, 1, null);
+const POTENT_FLOWER = new Cell(NEUTRAL_ID, 2, null);
+
+/*
+F - F - - - - - - F
+- W W W - F - F - -
+- W Q W - F - - F -
+- W W W - F - - - -
+- - - - P P - - - -
+- - - - P P - - - -
+- - - - F - W W W -
+- F - - F - W Q W -
+- - F - F - W W W -
+F - - - - - - F - F
+*/
 
 class Game {
   constructor(bots, width, height) {
@@ -250,44 +294,88 @@ class Game {
     this.width = width;
     this.height = height;
 
-    let initErrors = false;
-    if (width < 4 || width > 100) {
-      console.log('4 <= width <= 100');
-      initErrors = true;
-    }
-    if (height < 4 || height > 100) {
-      console.log('4 <= height <= 100');
-      initErrors = true;
-    }
-    if (bots.length != 2) {
-      console.log('Sorry, only 2 bots are supported right now');
-      initErrors = true;
-    }
-    if (initErrors) {
-      return;
-    }
-
-    for (let i = 0; i < bots.length; ++i) {
-      this.bots[i].init(i + 1);
-    }
-
-    let creatureIds = 0;
-    (this.map = []).length = height;
-    for (let y = 0; y < height; ++y) {
-      (this.map[y] = []).length = width;
-      for (let x = 0; x < width; ++x) {
-        // TODO: This part is hardcoded to 2 bots and set locations. Need to change later.
-        if (y == 1 && x >= 1 && x <= width - 2) {
-          this.map[y][x] = [new Cell(bots[0].getId(), new Skeleton(creatureIds++))];
-        } else if (y == height - 2 && x >= 1 && x <= width - 2) {
-          this.map[y][x] = [new Cell(bots[1].getId(), new Skeleton(creatureIds++))];
-        } else {
-          this.map[y][x] = [NEUTRAL_CELL];
+    this.insectId = 0;
+    let hardcodedMap = [
+      ['F', '-', 'F', '-', '-', '-', '-', '-', '-', 'F'],
+      ['-', 'W1', 'W1', 'W1', '-', 'F', '-', 'F', '-', '-'],
+      ['-', 'W1', 'Q1', 'Q1', '-', 'F', '-', '-', 'F', '-'],
+      ['-', 'W1', 'W1', 'W1', '-', 'F', '-', '-', '-', '-'],
+      ['-', '-', '-', '-', 'P', 'P', '-', '-', '-', '-'],
+      ['-', '-', '-', '-', 'P', 'P', '-', '-', '-', '-'],
+      ['-', '-', '-', '-', 'F', '-', 'W2', 'W2', 'W2', '-'],
+      ['-', 'F', '-', '-', 'F', '-', 'W2', 'Q2', 'W2', '-'],
+      ['-', '-', 'F', '-', 'F', '-', 'W2', 'W2', 'W2', '-'],
+      ['F', '-', '-', '-', '-', '-', '-', 'F', '-', 'F'],
+    ];
+    (this.map = []).length = 10;
+    for (let y = 0; y < 10; ++y) {
+      (this.map[y] = []).length = 10;
+      for (let x = 0; x < 10; ++x) {
+        switch (hardcodedMap[y][x]) {
+          case 'F':
+            this.map[y][x] = [FLOWER];
+            break;
+          case 'P':
+            this.map[y][x] = [POTENT_FLOWER];
+            break;
+          case 'W1':
+            this.map[y][x] = [new Cell(bots[0].getId(), 0, new Bee(this.insectId++, 1))];
+            break;
+          case 'Q2':
+            this.map[y][x] = [new Cell(bots[0].getId(), 0, new QueenBee(this.insectId++))];
+            break;
+          case 'W2':
+            this.map[y][x] = [new Cell(bots[1].getId(), 0, new Bee(this.insectId++, 1))];
+            break;
+          case 'Q2':
+            this.map[y][x] = [new Cell(bots[1].getId(), 0, new QueenBee(this.insectId++))];
+            break;
+          default:
+            this.map[y][x] = [NEUTRAL_CELL];
         }
       }
     }
 
-    this.canvas = new Canvas(width, height);
+    // let initErrors = false;
+    // if (width < 4 || width > 100) {
+    //   console.log('4 <= width <= 100');
+    //   initErrors = true;
+    // }
+    // if (height < 4 || height > 100) {
+    //   console.log('4 <= height <= 100');
+    //   initErrors = true;
+    // }
+    // if (bots.length != 2) {
+    //   console.log('Sorry, only 2 bots are supported right now');
+    //   initErrors = true;
+    // }
+    // if (initErrors) {
+    //   return;
+    // }
+
+    // for (let i = 0; i < bots.length; ++i) {
+    //   this.bots[i].init(i + 1);
+    // }
+
+    // let creatureIds = 0;
+    // (this.map = []).length = height;
+    // for (let y = 0; y < height; ++y) {
+    //   (this.map[y] = []).length = width;
+    //   for (let x = 0; x < width; ++x) {
+    //     // TODO: This part is hardcoded to 2 bots and set locations. Need to change later.
+    //     if (y == 1 && x >= 1 && x <= width - 2) {
+    //       this.map[y][x] = [new Cell(bots[0].getId(), new Skeleton(creatureIds++))];
+    //     } else if (y == height - 2 && x >= 1 && x <= width - 2) {
+    //       this.map[y][x] = [new Cell(bots[1].getId(), new Skeleton(creatureIds++))];
+    //     } else {
+    //       this.map[y][x] = [NEUTRAL_CELL];
+    //     }
+    //   }
+    // }
+
+    // this.canvas = new Canvas(width, height);
+
+    this.canvas = new Canvas(10, 10);
 
     this.runGame();
   }
@@ -300,7 +388,7 @@ class Game {
     this.canvas.drawFinalMap(dupedMap);
     let turn = function() {
       if (turns >= 10 * Math.sqrt(game.width * game.height) || gameEnded) {
-        // Max turns reached. Winner will be determined by sum of hp and attack they have.
+        // Max turns reached. Winner will be determined by sum of all insects they own.
         if (!gameEnded) {
           let botPoints = [];
           botPoints.length = game.bots.length;
@@ -308,7 +396,7 @@ class Game {
           for (let y = 0; y < game.height; ++y) {
             for (let x = 0; x < game.width; ++x) {
               let cell = game.map[y][x][0];
-              botPoints[cell.getBotId() - 1] += cell.getAttack() + cell.getLife();
+              botPoints[cell.getBotId() - 1] += cell.getCount();
             }
           }
 
@@ -368,18 +456,22 @@ class Game {
         if (cell.getBotId() == bot.getId()) {
           switch (action.getMove()) {
             case Move.UP:
+              this.makeMove((this.height + y - 1) % this.height, x, y, x, action);
               this.map[(this.height + y - 1) % this.height][x].push(this.map[y][x].shift());
               this.canvas.pushAnimation(cell, x, y, Move.UP);
               break;
             case Move.RIGHT:
+              this.makeMove(y, (x + 1) % this.width, y, x, action);
               this.map[y][(x + 1) % this.width].push(this.map[y][x].shift());
               this.canvas.pushAnimation(cell, x, y, Move.RIGHT);
               break;
             case Move.DOWN:
+              this.makeMove((y + 1) % this.height, x, y, x, action);
               this.map[(y + 1) % this.height][x].push(this.map[y][x].shift());
               this.canvas.pushAnimation(cell, x, y, Move.DOWN);
               break;
             case Move.LEFT:
+              this.makeMove(y, (this.width + x - 1) % this.width, y, x, action);
               this.map[y][(this.width + x - 1) % this.width].push(this.map[y][x].shift());
               this.canvas.pushAnimation(cell, x, y, Move.LEFT);
               break;
@@ -387,7 +479,9 @@ class Game {
         } // Else invalid action.
       }
     }
+  }
 
+  makeMove(newY, newX, currY, currX, action) {
 
   }
 
@@ -708,3 +802,46 @@ class Canvas {
     }
   }
 }
+
+/*
+Design game and stuff...
+
+- flowers around the map
+- start with n bees and 1 queen
+- queen does not collect pollen or attack
+- if bee is on flower, they collect pollen
+- bees have a maximum capacity of pollen to carry
+- bees also stack in cells (can split)
+- bring back pollen to queen bee to produce more bees
+- instant pollen when move to a flower, must stay to continue harvesting pollen and will not be able to attack
+- bees stack
+- 5 pollen == 1 bee
+- max 3 pollen per bee
+- max 100 bees
+-more potent flowers and less potent that give more pollen per round
+-if bee dies, pollen can be picked up, or it can be removed from the game
+- every attack on queen bee will need to be replenished with pollen. For example, if she was hit 3 times, she would need 3 pollen before being able to produce more bees.
+
+Attack
+- hit 3 where you are facing or hit 3 in a straight line
+
+Moves:
+UP
+DOWN
+RIGHT
+LEFT
+STAY/HARVEST
+
+AfterMoves:
+FACE_UP
+FACE_DOWN
+FACE_RIGHT
+FACE_LEFT
+
+Each turn:
+Move
+Face direction
+Spawn
+Attack
+Grab Pollen
+*/
