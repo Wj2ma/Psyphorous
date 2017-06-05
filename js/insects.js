@@ -109,7 +109,7 @@ class Bee extends Insect {
   }
 
   collectPollen(amount) {
-    this.pollen = Math.min(this.count * 3, this.pollen + amount);
+    this.pollen = Math.min(this.count * 3, this.pollen + this.count * amount);
   }
 
   depositPollen() {

@@ -13,7 +13,7 @@ F - - - - - - F - F
 
 class Game {
   constructor(bots, width, height) {
-    this.bots = bots || [new RandomBot(), new RandomBot()];
+    this.bots = bots || [new RandomBot(), new HarvesterBot()];
     this.width = 10;
     this.height = 10;
 
@@ -59,29 +59,29 @@ class Game {
         let queenBee;
         switch (hardcodedMap[y][x]) {
           case 'F':
-            this.map[y][x] = new Cell(Flower.REGULAR);
+            this.map[y][x] = new Cell(y, x, Flower.REGULAR);
             break;
           case 'P':
-            this.map[y][x] = new Cell(Flower.POTENT);
+            this.map[y][x] = new Cell(y, x, Flower.POTENT);
             break;
           case 'W1':
-            this.map[y][x] = new Cell(Flower.NONE, new Bee(this.insectId++, this.bots[0].getId()));
+            this.map[y][x] = new Cell(y, x, Flower.NONE, new Bee(this.insectId++, this.bots[0].getId()));
             break;
           case 'Q1':
             queenBee = new QueenBee(this.insectId++, this.bots[0].getId());
             this.queenBees.push(queenBee);
-            this.map[y][x] = new Cell(Flower.NONE, queenBee);
+            this.map[y][x] = new Cell(y, x, Flower.NONE, queenBee);
             break;
           case 'W2':
-            this.map[y][x] = new Cell(Flower.NONE, new Bee(this.insectId++, this.bots[1].getId()));
+            this.map[y][x] = new Cell(y, x, Flower.NONE, new Bee(this.insectId++, this.bots[1].getId()));
             break;
           case 'Q2':
             queenBee = new QueenBee(this.insectId++, this.bots[1].getId());
             this.queenBees.push(queenBee);
-            this.map[y][x] = new Cell(Flower.NONE, queenBee);
+            this.map[y][x] = new Cell(y, x, Flower.NONE, queenBee);
             break;
           default:
-            this.map[y][x] = new Cell(Flower.NONE);
+            this.map[y][x] = new Cell(y, x, Flower.NONE);
         }
       }
     }
@@ -115,7 +115,7 @@ class Game {
     let game = this;
     this.canvas.drawFinalMap(this.map);
     let turn = function() {
-      if (turns >= 10/* * Math.sqrt(game.width * game.height) */|| gameEnded) {
+      if (turns >= 20/*10 * Math.sqrt(game.width * game.height)*/ || gameEnded) {
         // Max turns reached. Winner will be determined by sum of all insects they own.
         if (!gameEnded) {
           let botPoints = [];
@@ -222,24 +222,26 @@ class Game {
   }
 
   makeMove(newY, newX, currY, currX, action) {
-    let insect = this.map[currY][currX].getInsect();
-    // Case when user doesn't move all bees off the square
-    if (action.getAmount() < insect.getCount()) {
-      let pollenToGive = insect.splitOff(action.getAmount());
-      // TODO: Need to distinguish whether bee or wasp.
-      this.map[newY][newX].pushInsect(
-        new Bee(
-          this.insectId++,
-          insect.getBotId(),
-          action.getFace(),
-          action.getAmount(),
-          pollenToGive
-        )
-      );
-    } else {
-      let insect = this.map[currY][currX].shiftInsect();
-      insect.changeFace(action.getFace());
-      this.map[newY][newX].pushInsect(insect);
+    if (action.getAmount() > 0) {
+      let insect = this.map[currY][currX].getInsect();
+      // Case when user doesn't move all bees off the square
+      if (action.getAmount() < insect.getCount()) {
+        let pollenToGive = insect.splitOff(action.getAmount());
+        // TODO: Need to distinguish whether bee or wasp.
+        this.map[newY][newX].pushInsect(
+          new Bee(
+            this.insectId++,
+            insect.getBotId(),
+            action.getFace(),
+            action.getAmount(),
+            pollenToGive
+          )
+        );
+      } else {
+        let insect = this.map[currY][currX].shiftInsect();
+        insect.changeFace(action.getFace());
+        this.map[newY][newX].pushInsect(insect);
+      }
     }
   }
 

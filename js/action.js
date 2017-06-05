@@ -4,7 +4,7 @@ class Action {
     this.y = y;
     this.move = move;
     this.face = face;
-    this.amount = amount;
+    this.amount = Math.round(amount);
   }
 
   getX() {

@@ -1,5 +1,5 @@
 class Cell {
-  constructor(potency, insect) {
+  constructor(y, x, potency, insect) {
     this.potency = potency;
     if (insect) {
       this.insects = [insect];      // Used for intermediate stages of a turn.
@@ -7,6 +7,8 @@ class Cell {
       this.insects = [];
     }
     this.mainInsect = insect;
+    this.y = y;
+    this.x = x;
   }
 
   getInsect() {
@@ -15,6 +17,14 @@ class Cell {
 
   getPotency() {
     return this.potency;
+  }
+
+  getY() {
+    return this.y;
+  }
+
+  getX() {
+    return this.x;
   }
 
   pushInsect(insect) {
