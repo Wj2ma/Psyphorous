@@ -13,7 +13,7 @@ F - - - - - - F - F
 
 class Game {
   constructor(bots, width, height) {
-    this.bots = bots || [new RandomBot(), new HarvesterBot()];
+    this.bots = bots || [new PotentBot(), new HarvesterBot()];
     this.width = 10;
     this.height = 10;
 
