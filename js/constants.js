@@ -43,4 +43,4 @@ const MAX_TURNS = 20;
 const ANIMATION_TIME = 500;
 const PAUSE_TIME = 200;
 const GRID_COLOUR = '#E4E4E4';
-const TEXT_COLOUR = 'E4E4E4';
+const TEXT_COLOUR = '#E4E4E4';
