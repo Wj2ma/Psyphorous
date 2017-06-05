@@ -56,6 +56,11 @@ class RandomBot extends Bot {
 
 // Bees go to nearest flower and return to queen bee when they have some pollen.
 class HarvesterBot extends Bot {
+  constructor(minPollen) {
+    super();
+    this.minPollen = minPollen || 1;
+  }
+
   computeNextMove(map) {
     let moves = [];
     let flowerCells = [];
@@ -81,10 +86,10 @@ class HarvesterBot extends Bot {
 
     for (let beeCell of beeCells) {
       let insect = beeCell.getInsect();
-      if (insect.getPollen() > 0) {
+      if (insect.getPollen() >= this.minPollen * insect.getCount()) {
         let path = this.getPath(map, beeCell.getY(), beeCell.getX(), queenBeeCell.getY(), queenBeeCell.getX());
         moves.push(new Action(beeCell.getX(), beeCell.getY(), path.move, path.move - 1, insect.getCount()));
-      } else {
+      } else if (beeCell.getPotency() == 0) {
         let flowerCell = flowerCells[0];
         let minPath = this.getPath(map, beeCell.getY(), beeCell.getX(), flowerCell.getY(), flowerCell.getX());
         for (let i = 1; i < flowerCells.length; ++i) {
@@ -106,9 +111,10 @@ class HarvesterBot extends Bot {
 
 // Bees go to nearest potent flower and return to queen bee when they have some pollen
 class PotentBot extends Bot {
-  constructor(numDowns) {
+  constructor(minPollen, numDowns) {
     super();
     this.turns = 0;
+    this.minPollen = minPollen || 1;
     this.numDowns = numDowns || 0;
   }
 
@@ -137,10 +143,10 @@ class PotentBot extends Bot {
 
     for (let beeCell of beeCells) {
       let insect = beeCell.getInsect();
-      if (insect.getPollen() > 0) {
+      if (insect.getPollen() > this.minPollen * insect.getCount()) {
         let path = this.getPath(map, beeCell.getY(), beeCell.getX(), queenBeeCell.getY(), queenBeeCell.getX());
         moves.push(new Action(beeCell.getX(), beeCell.getY(), path.move, path.move - 1, insect.getCount()));
-      } else {
+      } else if (beeCell.getPotency() != Flower.POTENT) {
         let flowerCell = flowerCells[0];
         let minPath = this.getPath(map, beeCell.getY(), beeCell.getX(), flowerCell.getY(), flowerCell.getX());
         for (let i = 1; i < flowerCells.length; ++i) {

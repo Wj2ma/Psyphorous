@@ -21,7 +21,7 @@ class Canvas {
   }
 
   drawGrid() {
-    this.ctx.strokeStyle = '#E4E4E4';
+    this.ctx.strokeStyle = GRID_COLOUR;
     this.ctx.beginPath();
     for (let x = this.xStep; x < this.width; x += this.xStep) {
       this.ctx.moveTo(x, 0);
@@ -151,7 +151,7 @@ class Canvas {
 
     let fontSize = this.insectSize / 1.5;
     this.ctx.font = fontSize + 'px Arial';
-    this.ctx.fillStyle = '#E4E4E4';
+    this.ctx.fillStyle = TEXT_COLOUR;
     this.ctx.fillText(count, x + fontSize / 6, y + fontSize);
     this.ctx.fillText(pollen, x + fontSize / 6, y + this.yStep - fontSize / 4);
   }
