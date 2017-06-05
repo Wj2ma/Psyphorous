@@ -6,7 +6,7 @@ class Canvas {
     this.ctx = canvas.getContext('2d');
     this.xStep = canvas.width / width;
     this.yStep = canvas.height / height;
-    this.insectSize = Math.min(this.xStep / 3, this.yStep / 3);
+    this.insectSize = Math.min(this.xStep / 2 - 8, this.yStep / 2 - 8);
     this.animations = [];
   }
 
@@ -151,13 +151,10 @@ class Canvas {
 
   drawFlower(x, y, potency) {
     if (potency == Flower.REGULAR) {
-      this.ctx.fillStyle = '#FFFF00';
+      this.ctx.drawImage(FLOWER, x - this.insectSize, y - this.insectSize, this.insectSize * 2, this.insectSize * 2);
     } else if (potency == Flower.POTENT) {
-      this.ctx.fillStyle = '#FF00FF';
+      this.ctx.drawImage(POTENT_FLOWER, x - this.insectSize, y - this.insectSize, this.insectSize * 2, this.insectSize * 2);
     }
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, this.insectSize, 0, 2 * Math.PI);
-    this.ctx.fill();
   }
 
   drawFinalMap(map) {

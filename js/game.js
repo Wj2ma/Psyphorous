@@ -13,7 +13,7 @@ F - - - - - - F - F
 
 class Game {
   constructor(bots, width, height) {
-    this.bots = bots;
+    this.bots = bots || [new RandomBot(), new RandomBot()];
     this.width = 10;
     this.height = 10;
 
@@ -34,7 +34,7 @@ class Game {
     //   return;
     // }
 
-    for (let i = 0; i < bots.length; ++i) {
+    for (let i = 0; i < this.bots.length; ++i) {
       this.bots[i].init(i + 1);
     }
 
@@ -65,19 +65,19 @@ class Game {
             this.map[y][x] = new Cell(Flower.POTENT);
             break;
           case 'W1':
-            this.map[y][x] = new Cell(Flower.NONE, new Bee(this.insectId++, bots[0].getId()));
+            this.map[y][x] = new Cell(Flower.NONE, new Bee(this.insectId++, this.bots[0].getId()));
             break;
           case 'Q1':
-            queenBee = new QueenBee(this.insectId++, bots[0].getId());
-            this.queenBees[bots[0].getId()] = queenBee;
+            queenBee = new QueenBee(this.insectId++, this.bots[0].getId());
+            this.queenBees[this.bots[0].getId()] = queenBee;
             this.map[y][x] = new Cell(Flower.NONE, queenBee);
             break;
           case 'W2':
-            this.map[y][x] = new Cell(Flower.NONE, new Bee(this.insectId++, bots[1].getId()));
+            this.map[y][x] = new Cell(Flower.NONE, new Bee(this.insectId++, this.bots[1].getId()));
             break;
           case 'Q2':
-            queenBee = new QueenBee(this.insectId++, bots[1].getId());
-            this.queenBees[bots[1].getId()] = queenBee;
+            queenBee = new QueenBee(this.insectId++, this.bots[1].getId());
+            this.queenBees[this.bots[1].getId()] = queenBee;
             this.map[y][x] = new Cell(Flower.NONE, queenBee);
             break;
           default:
@@ -267,6 +267,10 @@ class Game {
     }
     return false;
   }
+}
+
+function start() {
+  new Game();
 }
 
 /*
