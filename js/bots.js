@@ -106,6 +106,12 @@ class HarvesterBot extends Bot {
 
 // Bees go to nearest potent flower and return to queen bee when they have some pollen
 class PotentBot extends Bot {
+  constructor(numDowns) {
+    super();
+    this.turns = 0;
+    this.numDowns = numDowns || 0;
+  }
+
   computeNextMove(map) {
     let moves = [];
     let flowerCells = [];
@@ -148,7 +154,11 @@ class PotentBot extends Bot {
       }
     }
 
-    moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), Move.STAY, Math.floor(Math.random() * 4), 1));
+    if (this.turns++ < this.numDowns) {
+      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), Move.DOWN, Math.floor(Math.random() * 4), 1));
+    } else {
+      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), Move.STAY, Face.LEFT, 1));
+    }
 
     return moves;
   }

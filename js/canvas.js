@@ -80,19 +80,19 @@ class Canvas {
         let movementFace = an.face;
         switch (an.move) {
           case Move.UP:
-            an.y = (canvas.height + an.y - elapsedTime * canvas.yStep / 500) % canvas.height;
+            an.y = (canvas.height + an.y - elapsedTime * canvas.yStep / ANIMATION_TIME) % canvas.height;
             movementFace = Face.UP;
             break;
           case Move.RIGHT:
-            an.x = (an.x + elapsedTime * canvas.xStep / 500) % canvas.width;
+            an.x = (an.x + elapsedTime * canvas.xStep / ANIMATION_TIME) % canvas.width;
             movementFace = Face.RIGHT;
             break;
           case Move.DOWN:
-            an.y = (an.y + elapsedTime * canvas.yStep / 500) % canvas.height;
+            an.y = (an.y + elapsedTime * canvas.yStep / ANIMATION_TIME) % canvas.height;
             movementFace = Face.DOWN;
             break;
           case Move.LEFT:
-            an.x = (canvas.width + an.x - elapsedTime * canvas.xStep / 500) % canvas.width;
+            an.x = (canvas.width + an.x - elapsedTime * canvas.xStep / ANIMATION_TIME) % canvas.width;
             movementFace = Face.LEFT;
             break;
         }
@@ -116,11 +116,11 @@ class Canvas {
         }
       }
 
-      if (totalTime < 500) {
+      if (totalTime < ANIMATION_TIME) {
         requestAnimationFrame(animateFrame);
       } else {
         canvas.drawFinalMap(map);
-        setTimeout(callback, 500);
+        setTimeout(callback, PAUSE_TIME);
       }
     };
 

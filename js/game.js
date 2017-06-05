@@ -115,7 +115,7 @@ class Game {
     let game = this;
     this.canvas.drawFinalMap(this.map);
     let turn = function() {
-      if (turns >= 20/*10 * Math.sqrt(game.width * game.height)*/ || gameEnded) {
+      if (turns >= MAX_TURNS/*10 * Math.sqrt(game.width * game.height)*/ || gameEnded) {
         // Max turns reached. Winner will be determined by sum of all insects they own.
         if (!gameEnded) {
           let botPoints = [];

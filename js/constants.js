@@ -38,3 +38,7 @@ for (let i = 0; i < 2; ++i) {
   BEES[i].src = 'images/bee' + (i + 1) + '.png';
   QUEEN_BEES[i].src = 'images/queen' + (i + 1) + '.png';
 }
+
+const MAX_TURNS = 20;
+const ANIMATION_TIME = 500;
+const PAUSE_TIME = 200;
