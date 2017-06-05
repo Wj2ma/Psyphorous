@@ -27,9 +27,20 @@ class Insect {
     return this.count;
   }
 
+  getPollen() {
+    return this.pollen;
+  }
+
+  getFace() {
+    return this.face;
+  }
+
   // Split 'amount' insects off from this group. E.g. The splitted off will be moving to a different cell.
   splitOff(amount) {
+    let pollenToGive = Math.round(this.pollen * amount / this.count);
     this.count -= amount;
+    this.pollen -= pollenToGive;
+    return pollenToGive;
   }
 
   takeDamage(damage) {
@@ -83,9 +94,10 @@ class QueenBee extends Insect {
 }
 
 class Bee extends Insect {
-  constructor(id, botId, face, amount) {
+  constructor(id, botId, face, amount, pollen) {
     super(id, botId, face);
     this.count = amount || this.count;
+    this.pollen = pollen || this.pollen;
   }
 
   getType() {
@@ -97,7 +109,7 @@ class Bee extends Insect {
   }
 
   collectPollen(amount) {
-    this.pollen = Math.max(this.count * 3, this.pollen + amount);
+    this.pollen = Math.min(this.count * 3, this.pollen + amount);
   }
 
   depositPollen() {

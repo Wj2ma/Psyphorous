@@ -35,11 +35,11 @@ class Game {
     // }
 
     for (let i = 0; i < this.bots.length; ++i) {
-      this.bots[i].init(i + 1);
+      this.bots[i].init(i);
     }
 
     this.insectId = 0;
-    this.queenBees = { };
+    this.queenBees = [];
     let hardcodedMap = [
       ['F', '-', 'F', '-', '-', '-', '-', '-', '-', 'F'],
       ['-', 'W1', 'W1', 'W1', '-', 'F', '-', 'F', '-', '-'],
@@ -69,7 +69,7 @@ class Game {
             break;
           case 'Q1':
             queenBee = new QueenBee(this.insectId++, this.bots[0].getId());
-            this.queenBees[this.bots[0].getId()] = queenBee;
+            this.queenBees.push(queenBee);
             this.map[y][x] = new Cell(Flower.NONE, queenBee);
             break;
           case 'W2':
@@ -77,7 +77,7 @@ class Game {
             break;
           case 'Q2':
             queenBee = new QueenBee(this.insectId++, this.bots[1].getId());
-            this.queenBees[this.bots[1].getId()] = queenBee;
+            this.queenBees.push(queenBee);
             this.map[y][x] = new Cell(Flower.NONE, queenBee);
             break;
           default:
@@ -115,7 +115,7 @@ class Game {
     let game = this;
     this.canvas.drawFinalMap(this.map);
     let turn = function() {
-      if (turns >= 10 * Math.sqrt(game.width * game.height) || gameEnded) {
+      if (turns >= 10/* * Math.sqrt(game.width * game.height) */|| gameEnded) {
         // Max turns reached. Winner will be determined by sum of all insects they own.
         if (!gameEnded) {
           let botPoints = [];
@@ -125,21 +125,25 @@ class Game {
             for (let x = 0; x < game.width; ++x) {
               let insect = game.map[y][x].getInsect();
               if (insect) {
-                botPoints[insect.getBotId() - 1] += insect.getCount();
+                botPoints[insect.getBotId()] += insect.getCount();
               }
             }
+          }
+
+          for (let i = 0; i < botPoints.length; ++i) {
+            botPoints[i] += game.queenBees[i].getPollen() / 5;
           }
 
           console.log('The game has ended after ' + turns + ' turns. Here are the following scores:');
           let winners = [];
           let maxPoints = 0;
           for (let i = 0; i < botPoints.length; ++i) {
-            console.log('Bot ' + game.bots[i].getId() + ' scored ' + botPoints[i] + ' points!');
+            console.log('Bot ' + (game.bots[i].getId() + 1) + ' scored ' + botPoints[i] + ' points!');
             if (maxPoints < botPoints[i]) {
-              winners = [game.bots[i].getId()];
+              winners = [game.bots[i].getId() + 1];
               maxPoints = botPoints[i];
             } else if (maxPoints == botPoints[i]) {
-              winners.push(game.bots[i].getId());
+              winners.push(game.bots[i].getId() + 1);
             }
           }
           if (winners.length > 1) {
@@ -165,8 +169,10 @@ class Game {
             }
           }
         }
+        game.spawnBees();
         game.resolveConflicts();
         game.computeDamages();
+        game.calculatePollen();
         gameEnded = game.didGameEnd(++turns);
 
         game.canvas.animate(game.map, turn);
@@ -206,6 +212,9 @@ class Game {
               this.makeMove(y, (this.width + x - 1) % this.width, y, x, action);
               this.canvas.pushAnimation(insect, x, y, Move.LEFT);
               break;
+            default:
+              this.map[y][x].getInsect().changeFace(action.getFace());
+              break;
           }
         } // Else invalid action.
       }
@@ -216,11 +225,50 @@ class Game {
     let insect = this.map[currY][currX].getInsect();
     // Case when user doesn't move all bees off the square
     if (action.getAmount() < insect.getCount()) {
-      insect.splitOff(action.getAmount());
+      let pollenToGive = insect.splitOff(action.getAmount());
       // TODO: Need to distinguish whether bee or wasp.
-      this.map[newY][newX].pushInsect(new Bee(this.insectId++, insect.getBotId(), action.getFace(), action.getAmount()));
+      this.map[newY][newX].pushInsect(
+        new Bee(
+          this.insectId++,
+          insect.getBotId(),
+          action.getFace(),
+          action.getAmount(),
+          pollenToGive
+        )
+      );
     } else {
-      this.map[newY][newX].pushInsect(this.map[currY][currX].shiftInsect());
+      let insect = this.map[currY][currX].shiftInsect();
+      insect.changeFace(action.getFace());
+      this.map[newY][newX].pushInsect(insect);
+    }
+  }
+
+  // Spawn bees if sufficient pollen is made.
+  spawnBees() {
+    for (let y = 0; y < this.height; ++y) {
+      for (let x = 0; x < this.width; ++x) {
+        let insect = this.map[y][x].getInsect();
+        if (insect && insect.getType() == InsectType.QUEENBEE) {
+          let bees = insect.spawnBees();
+          if (bees > 0) {
+            let newBees = new Bee(this.insectId++, insect.getBotId(), insect.getFace(), bees);
+            switch (insect.getFace()) {
+              case Face.UP:
+                this.map[(y + 1) % this.height][x].pushInsect(newBees);
+                break;
+              case Face.RIGHT:
+                this.map[y][(this.width + x - 1) % this.width].pushInsect(newBees);
+                break;
+              case Face.DOWN:
+                this.map[(this.height + y - 1) % this.height][x].pushInsect(newBees);
+                break;
+              case Face.LEFT:
+                this.map[y][(x + 1) % this.width].pushInsect(newBees);
+                break;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -239,15 +287,42 @@ class Game {
 
   }
 
+  calculatePollen() {
+    for (let y = 0; y < this.height; ++y) {
+      for (let x = 0; x < this.width; ++x) {
+        let insect = this.map[y][x].getInsect();
+        if (insect && insect.getType() == InsectType.QUEENBEE) {
+          this.maybeHarvestPollen(insect, y + 1, x - 1);
+          this.maybeHarvestPollen(insect, y + 1, x);
+          this.maybeHarvestPollen(insect, y + 1, x + 1);
+          this.maybeHarvestPollen(insect, y - 1, x - 1);
+          this.maybeHarvestPollen(insect, y - 1, x);
+          this.maybeHarvestPollen(insect, y - 1, x + 1);
+          this.maybeHarvestPollen(insect, y, x - 1);
+          this.maybeHarvestPollen(insect, y, x + 1);
+        }
+      }
+    }
+
+    for (let y = 0; y < this.height; ++y) {
+      for (let x = 0; x < this.height; ++x) {
+        let insect = this.map[y][x].getInsect();
+        if (insect) {
+          insect.collectPollen(this.map[y][x].getPotency());
+        }
+      }
+    }
+  }
+
   // A player is out
   didGameEnd(turns) {
-    let winningId = 0;
+    let winningId = -1;
     let isWinPossible = true;
     for (let y = 0; y < this.height && isWinPossible; ++y) {
       for (let x = 0; x < this.width && isWinPossible; ++x) {
         let insect = this.map[y][x].getInsect();
         if (insect && insect.getType != InsectType.QUEENBEE) {
-          if (winningId == 0) {
+          if (winningId == -1) {
             winningId = insect.getBotId();
           } else if (winningId != insect.getBotId()) {
             isWinPossible = false;
@@ -258,7 +333,7 @@ class Game {
 
     if (isWinPossible) {
       console.log('The game has ended after ' + turns + ' turns.');
-      if (winningId == 0) {
+      if (winningId == -1) {
         console.log('Tie game!');
       } else {
         console.log('Bot ' + winningId + ' wins!');
@@ -266,6 +341,15 @@ class Game {
       return true;
     }
     return false;
+  }
+
+  maybeHarvestPollen(queenBee, y, x) {
+    y = (y + this.height) % this.height;
+    x = (x + this.width) % this.width;
+    let insect = this.map[y][x].getInsect();
+    if (insect && insect.getBotId() == queenBee.getBotId()) {
+      queenBee.takePollen(insect.depositPollen());
+    }
   }
 }
 

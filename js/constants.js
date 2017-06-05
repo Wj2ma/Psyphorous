@@ -29,6 +29,12 @@ const Flower = {
 const KILL_PRIORITY = [ InsectType.WASP, InsectType.BEE, InsectType.QUEENBEE ];
 
 const FLOWER = new Image();
-FLOWER.src = "images/flower.png";
+FLOWER.src = 'images/flower.png';
 const POTENT_FLOWER = new Image();
-POTENT_FLOWER.src = "images/potentFlower.png";
+POTENT_FLOWER.src = 'images/potentFlower.png';
+const BEES = [new Image(), new Image()];
+const QUEEN_BEES = [new Image(), new Image()];
+for (let i = 0; i < 2; ++i) {
+  BEES[i].src = 'images/bee' + (i + 1) + '.png';
+  QUEEN_BEES[i].src = 'images/queen' + (i + 1) + '.png';
+}

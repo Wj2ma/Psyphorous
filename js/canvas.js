@@ -12,12 +12,12 @@ class Canvas {
 
   // Maps x unit to the center of its grid position in pixels.
   mapXCoordToPixels(x) {
-    return x * this.xStep + this.xStep / 2;
+    return x * this.xStep;
   }
 
   // Maps y unit to the center of its grid position in pixels.
   mapYCoordToPixels(y) {
-    return y * this.yStep + this.yStep / 2;
+    return y * this.yStep;
   }
 
   drawGrid() {
@@ -53,7 +53,9 @@ class Canvas {
     this.animations.set(insect.getId(), {
       botId: insect.getBotId(),
       type: insect.getType(),
+      face: insect.getFace(),
       count: insect.getCount(),
+      pollen: insect.getPollen(),
       x: this.mapXCoordToPixels(x),
       y: this.mapYCoordToPixels(y),
       move
@@ -75,37 +77,42 @@ class Canvas {
       canvas.drawFlowers(map);
 
       for (let an of canvas.animations.values()) {
+        let movementFace = an.face;
         switch (an.move) {
           case Move.UP:
             an.y = (canvas.height + an.y - elapsedTime * canvas.yStep / 500) % canvas.height;
+            movementFace = Face.UP;
             break;
           case Move.RIGHT:
             an.x = (an.x + elapsedTime * canvas.xStep / 500) % canvas.width;
+            movementFace = Face.RIGHT;
             break;
           case Move.DOWN:
             an.y = (an.y + elapsedTime * canvas.yStep / 500) % canvas.height;
+            movementFace = Face.DOWN;
             break;
           case Move.LEFT:
             an.x = (canvas.width + an.x - elapsedTime * canvas.xStep / 500) % canvas.width;
+            movementFace = Face.LEFT;
             break;
         }
 
-        let colour = canvas.getColour(an.botId, an.type);
+        let img = canvas.getImage(an.botId, an.type);
 
         // Main creature.
-        canvas.drawInsect(an.x, an.y, colour, an.count);
+        canvas.drawInsect(an.x, an.y, img, movementFace, an.count, an.pollen);
 
         // If creatures are to be wrapped around, draw the same creature on the other end.
         if (an.x > canvas.width - canvas.insectSize) {
-          canvas.drawInsect(an.x - canvas.width, an.y, colour, an.count);
+          canvas.drawInsect(an.x - canvas.width, an.y, img, movementFace, an.count, an.pollen);
         } else if (an.x < canvas.insectSize) {
-          canvas.drawInsect(an.x + canvas.width, an.y, colour, an.count);
+          canvas.drawInsect(an.x + canvas.width, an.y, img, movementFace, an.count, an.pollen);
         }
 
         if (an.y > canvas.height - canvas.insectSize) {
-          canvas.drawInsect(an.x, an.y - canvas.height, colour, an.count);
+          canvas.drawInsect(an.x, an.y - canvas.height, img, movementFace, an.count, an.pollen);
         } else if (an.y < canvas.insectSize) {
-          canvas.drawInsect(an.x, an.y + canvas.height, colour, an.count);
+          canvas.drawInsect(an.x, an.y + canvas.height, img, movementFace, an.count, an.pollen);
         }
       }
 
@@ -120,40 +127,52 @@ class Canvas {
     requestAnimationFrame(animateFrame);
   }
 
-  getColour(botId, type) {
+  getImage(botId, type) {
     // TODO: This part is hardcoded to 2 bots.
-    switch (botId) {
-      case 1:
-        if (type == InsectType.BEE) {
-          return '#FFAAAA';
-        } else {
-          return '#FF0030';
-        }
-      case 2:
-        if (type == InsectType.BEE) {
-          return '#AAAAFF';
-        } else {
-          return '#0032FF';
-        }
+    if (type == InsectType.BEE) {
+      return BEES[botId];
+    } else {
+      return QUEEN_BEES[botId];
     }
   }
 
-  drawInsect(x, y, colour, count) {
-    this.ctx.fillStyle = colour;
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, this.insectSize, 0, 2 * Math.PI);
-    this.ctx.fill();
+  drawInsect(x, y, img, face, count, pollen) {
+    this.ctx.save();
+    this.ctx.translate(x + this.xStep / 2, y + this.yStep / 2);
+    this.ctx.rotate(((180 + face * 90) % 360) * Math.PI / 180);
+    this.ctx.drawImage(
+      img,
+      -this.insectSize,
+      -this.insectSize,
+      this.insectSize * 2,
+      this.insectSize * 2
+    );
+    this.ctx.restore();
 
-    this.ctx.font = '18px Arial';
+    let fontSize = this.insectSize / 1.5;
+    this.ctx.font = fontSize + 'px Arial';
     this.ctx.fillStyle = '#E4E4E4';
-    this.ctx.fillText(count, x - 5, y + 6);
+    this.ctx.fillText(count, x + fontSize / 6, y + fontSize);
+    this.ctx.fillText(pollen, x + fontSize / 6, y + this.yStep - fontSize / 4);
   }
 
   drawFlower(x, y, potency) {
     if (potency == Flower.REGULAR) {
-      this.ctx.drawImage(FLOWER, x - this.insectSize, y - this.insectSize, this.insectSize * 2, this.insectSize * 2);
+      this.ctx.drawImage(
+        FLOWER,
+        x + this.xStep / 2 - this.insectSize,
+        y + this.yStep / 2 - this.insectSize,
+        this.insectSize * 2,
+        this.insectSize * 2
+      );
     } else if (potency == Flower.POTENT) {
-      this.ctx.drawImage(POTENT_FLOWER, x - this.insectSize, y - this.insectSize, this.insectSize * 2, this.insectSize * 2);
+      this.ctx.drawImage(
+        POTENT_FLOWER,
+        x + this.xStep / 2 - this.insectSize ,
+        y + this.yStep / 2 - this.insectSize,
+        this.insectSize * 2,
+        this.insectSize * 2
+      );
     }
   }
 
@@ -170,8 +189,10 @@ class Canvas {
           this.drawInsect(
             this.mapXCoordToPixels(x),
             this.mapYCoordToPixels(y),
-            this.getColour(insect.getBotId(), insect.getType()),
-            insect.getCount()
+            this.getImage(insect.getBotId(), insect.getType()),
+            insect.getFace(),
+            insect.getCount(),
+            insect.getPollen()
           );
         }
       }
