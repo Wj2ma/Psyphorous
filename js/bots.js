@@ -1,4 +1,7 @@
-class Bot {
+let Action = require('./action').Action;
+let C = require('./constants.js');
+
+exports.Bot = class Bot {
   init(id) {
     this.id = id;
   }
@@ -21,15 +24,15 @@ class Bot {
 
     if (toY != fromY) {
       if (downDist > upDist) {
-        path.move = Move.UP;
+        path.move = C.Move.UP;
       } else {
-        path.move = Move.DOWN;
+        path.move = C.Move.DOWN;
       }
     } else if (toX != fromX) {
       if (rightDist > leftDist) {
-        path.move = Move.LEFT;
+        path.move = C.Move.LEFT;
       } else {
-        path.move = Move.RIGHT;
+        path.move = C.Move.RIGHT;
       }
     }
 
@@ -37,9 +40,9 @@ class Bot {
 
     return path;
   }
-}
+};
 
-class RandomBot extends Bot {
+exports.RandomBot = class RandomBot extends exports.Bot {
   computeNextMove(map) {
     let moves = [];
     for (let y = 0; y < map.length; ++y) {
@@ -52,10 +55,10 @@ class RandomBot extends Bot {
     }
     return moves;
   }
-}
+};
 
 // Bees go to nearest flower and return to queen bee when they have some pollen.
-class HarvesterBot extends Bot {
+exports.HarvesterBot = class HarvesterBot extends exports.Bot {
   constructor(minPollen) {
     super();
     this.minPollen = minPollen || 1;
@@ -75,7 +78,7 @@ class HarvesterBot extends Bot {
 
         let insect = map[y][x].getInsect();
         if (insect && insect.getBotId() == this.id) {
-          if (insect.getType() == InsectType.QUEENBEE) {
+          if (insect.getType() == C.InsectType.QUEENBEE) {
             queenBeeCell = map[y][x];
           } else {
             beeCells.push(map[y][x]);
@@ -103,14 +106,14 @@ class HarvesterBot extends Bot {
       }
     }
 
-    moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), Move.STAY, Math.floor(Math.random() * 4), 1));
+    moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), C.Move.STAY, Math.floor(Math.random() * 4), 1));
 
     return moves;
   }
-}
+};
 
 // Bees go to nearest potent flower and return to queen bee when they have some pollen
-class PotentBot extends Bot {
+exports.PotentBot = class PotentBot extends exports.Bot {
   constructor(minPollen, numDowns) {
     super();
     this.turns = 0;
@@ -126,13 +129,13 @@ class PotentBot extends Bot {
 
     for (let y = 0; y < map.length; ++y) {
       for (let x = 0; x < map[y].length; ++x) {
-        if (map[y][x].getPotency() == Flower.POTENT) {
+        if (map[y][x].getPotency() == C.Flower.POTENT) {
           flowerCells.push(map[y][x]);
         }
 
         let insect = map[y][x].getInsect();
         if (insect && insect.getBotId() == this.id) {
-          if (insect.getType() == InsectType.QUEENBEE) {
+          if (insect.getType() == C.InsectType.QUEENBEE) {
             queenBeeCell = map[y][x];
           } else {
             beeCells.push(map[y][x]);
@@ -146,7 +149,7 @@ class PotentBot extends Bot {
       if (insect.getPollen() > this.minPollen * insect.getCount()) {
         let path = this.getPath(map, beeCell.getY(), beeCell.getX(), queenBeeCell.getY(), queenBeeCell.getX());
         moves.push(new Action(beeCell.getX(), beeCell.getY(), path.move, path.move - 1, insect.getCount()));
-      } else if (beeCell.getPotency() != Flower.POTENT) {
+      } else if (beeCell.getPotency() != C.Flower.POTENT) {
         let flowerCell = flowerCells[0];
         let minPath = this.getPath(map, beeCell.getY(), beeCell.getX(), flowerCell.getY(), flowerCell.getX());
         for (let i = 1; i < flowerCells.length; ++i) {
@@ -161,14 +164,14 @@ class PotentBot extends Bot {
     }
 
     if (this.turns++ < this.numDowns) {
-      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), Move.DOWN, Math.floor(Math.random() * 4), 1));
+      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), C.Move.DOWN, Math.floor(Math.random() * 4), 1));
     } else {
-      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), Move.STAY, Face.LEFT, 1));
+      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), C.Move.STAY, C.Face.LEFT, 1));
     }
 
     return moves;
   }
-}
+};
 
 // class RandomBot2 extends Bot {
 //   computeNextMove(map) {

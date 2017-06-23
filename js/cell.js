@@ -1,4 +1,6 @@
-class Cell {
+let C = require('./constants.js');
+
+exports.Cell =  class Cell {
   constructor(y, x, potency, insect) {
     this.potency = potency;
     if (insect) {
@@ -9,6 +11,10 @@ class Cell {
     this.mainInsect = insect;
     this.y = y;
     this.x = x;
+  }
+
+  getReplayData() {
+    return { p: this.potency };
   }
 
   getInsect() {
@@ -63,7 +69,7 @@ class Cell {
         teams[botId][insect.getType()].push(insect);
       } else {
         let team = { attackPower: insect.getAttack() };
-        for (let type in Object.values(InsectType)) {
+        for (let type in Object.values(C.InsectType)) {
           if (type == insect.getType()) {
             team[type] = [insect];
           } else {
@@ -88,7 +94,7 @@ class Cell {
       }
 
       // Take the damage in order of kill priorities.
-      for (let killType of KILL_PRIORITY) {
+      for (let killType of C.KILL_PRIORITY) {
         for (let insect of team[killType]) {
           if (maxAttackPower == 0) {
             break;
@@ -116,7 +122,7 @@ class Cell {
     let survivingTeams = 0;
     for (let team of Object.values(teams)) {
       let finalInsect = null;
-      for (let killType of KILL_PRIORITY) {
+      for (let killType of C.KILL_PRIORITY) {
         let primeInsect = team[killType].shift();
         for (;;) {
           let mergeInsect = team[killType].shift();
@@ -145,4 +151,4 @@ class Cell {
       this.insects.push(this.mainInsect);
     }
   }
-}
+};

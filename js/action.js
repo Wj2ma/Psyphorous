@@ -1,4 +1,4 @@
-class Action {
+exports.Action = class Action {
   constructor(x, y, move, face, amount) {
     this.x = x;
     this.y = y;
@@ -26,4 +26,4 @@ class Action {
   getAmount() {
     return this.amount;
   }
-}
+};

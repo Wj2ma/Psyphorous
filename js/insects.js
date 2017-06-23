@@ -1,10 +1,17 @@
-class Insect {
+let C = require('./constants.js');
+
+exports.Insect = class Insect {
   constructor(id, botId, face) {
     this.id = id;
     this.botId = botId;
     this.count = 1;
-    this.face = face || Face.UP;
+    this.face = face || C.Face.UP;
     this.pollen = 0;
+    this.type = -1;
+  }
+
+  getReplayData() {
+    return { i: this.botId, c: this.count, f: this.face, p: this.pollen, t: this.type };
   }
 
   getId() {
@@ -35,6 +42,10 @@ class Insect {
     return this.face;
   }
 
+  getType() {
+    return this.type;
+  }
+
   // Split 'amount' insects off from this group. E.g. The splitted off will be moving to a different cell.
   splitOff(amount) {
     let pollenToGive = Math.round(this.pollen * amount / this.count);
@@ -59,15 +70,12 @@ class Insect {
   collectPollen(amount) {
 
   }
-}
+};
 
-class QueenBee extends Insect {
+exports.QueenBee = class QueenBee extends exports.Insect {
   constructor(id, botId, face) {
     super(id, botId, face);
-  }
-
-  getType() {
-    return InsectType.QUEENBEE;
+    this.type = C.InsectType.QUEENBEE;
   }
 
   getAttack() {
@@ -91,17 +99,14 @@ class QueenBee extends Insect {
     this.pollen %= 5;
     return bees;
   }
-}
+};
 
-class Bee extends Insect {
+exports.Bee = class Bee extends exports.Insect {
   constructor(id, botId, face, amount, pollen) {
     super(id, botId, face);
     this.count = amount || this.count;
     this.pollen = pollen || this.pollen;
-  }
-
-  getType() {
-    return InsectType.BEE;
+    this.type = C.InsectType.BEE;
   }
 
   getAttack() {
@@ -117,12 +122,13 @@ class Bee extends Insect {
     this.pollen = 0;
     return amount;
   }
-}
+};
 
-class Wasp extends Insect {
+exports.Wasp = class Wasp extends exports.Insect {
   constructor(id, botId, face, count) {
     super(id, botId, face);
     this.count = count;
+    this.type = C.InsectType.WASP;
   }
 
   getAttack() {
@@ -136,4 +142,4 @@ class Wasp extends Insect {
   getKillAmount() {
     return this.count * 2;
   }
-}
+};

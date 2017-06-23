@@ -1,15 +1,13 @@
-/*
-F - F - - - - - - F
-- W W W - F - F - -
-- W Q W - F - - F -
-- W W W - F - - - -
-- - - - P P - - - -
-- - - - P P - - - -
-- - - - F - W W W -
-- F - - F - W Q W -
-- - F - F - W W W -
-F - - - - - - F - F
-*/
+let Cell = require('./cell.js').Cell;
+let Insects = require('./insects.js');
+let Bee = Insects.Bee;
+let QueenBee = Insects.QueenBee;
+let Bots = require('./bots.js');
+let PotentBot = Bots.PotentBot;
+let HarvesterBot = Bots.HarvesterBot;
+let C = require('./constants.js');
+
+let fileStream = require('fs');
 
 class Game {
   constructor(bots, width, height) {
@@ -59,29 +57,29 @@ class Game {
         let queenBee;
         switch (hardcodedMap[y][x]) {
           case 'F':
-            this.map[y][x] = new Cell(y, x, Flower.REGULAR);
+            this.map[y][x] = new Cell(y, x, C.Flower.REGULAR);
             break;
           case 'P':
-            this.map[y][x] = new Cell(y, x, Flower.POTENT);
+            this.map[y][x] = new Cell(y, x, C.Flower.POTENT);
             break;
           case 'W1':
-            this.map[y][x] = new Cell(y, x, Flower.NONE, new Bee(this.insectId++, this.bots[0].getId()));
+            this.map[y][x] = new Cell(y, x, C.Flower.NONE, new Bee(this.insectId++, this.bots[0].getId()));
             break;
           case 'Q1':
             queenBee = new QueenBee(this.insectId++, this.bots[0].getId());
             this.queenBees.push(queenBee);
-            this.map[y][x] = new Cell(y, x, Flower.NONE, queenBee);
+            this.map[y][x] = new Cell(y, x, C.Flower.NONE, queenBee);
             break;
           case 'W2':
-            this.map[y][x] = new Cell(y, x, Flower.NONE, new Bee(this.insectId++, this.bots[1].getId()));
+            this.map[y][x] = new Cell(y, x, C.Flower.NONE, new Bee(this.insectId++, this.bots[1].getId()));
             break;
           case 'Q2':
             queenBee = new QueenBee(this.insectId++, this.bots[1].getId());
             this.queenBees.push(queenBee);
-            this.map[y][x] = new Cell(y, x, Flower.NONE, queenBee);
+            this.map[y][x] = new Cell(y, x, C.Flower.NONE, queenBee);
             break;
           default:
-            this.map[y][x] = new Cell(y, x, Flower.NONE);
+            this.map[y][x] = new Cell(y, x, C.Flower.NONE);
         }
       }
     }
@@ -104,87 +102,92 @@ class Game {
 
     // this.canvas = new Canvas(width, height);
 
-    this.canvas = new Canvas(10, 10);
+  //  this.canvas = new Canvas(10, 10);
+    this.output = { m: this.getMapReplayData(), t: [] };
 
     this.runGame();
   }
 
   runGame() {
-    let turns = 0;
     let gameEnded = false;
-    let game = this;
-    this.canvas.drawFinalMap(this.map);
-    let turn = function() {
-      if (turns >= MAX_TURNS/*10 * Math.sqrt(game.width * game.height)*/ || gameEnded) {
-        // Max turns reached. Winner will be determined by sum of all insects they own.
-        if (!gameEnded) {
-          let botPoints = [];
-          botPoints.length = game.bots.length;
-          botPoints.fill(0);
-          for (let y = 0; y < game.height; ++y) {
-            for (let x = 0; x < game.width; ++x) {
-              let insect = game.map[y][x].getInsect();
-              if (insect) {
-                botPoints[insect.getBotId()] += insect.getCount();
-              }
-            }
-          }
+    let turn = 0;
 
-          for (let i = 0; i < botPoints.length; ++i) {
-            botPoints[i] += game.queenBees[i].getPollen() / 5;
-          }
+    for (; turn < C.MAX_TURNS/*10 * Math.sqrt(game.width * game.height)*/ && !gameEnded; ++turn) {
+      let turnsOutput = [];
+      let botsActions = [];
 
-          console.log('The game has ended after ' + turns + ' turns. Here are the following scores:');
-          let winners = [];
-          let maxPoints = 0;
-          for (let i = 0; i < botPoints.length; ++i) {
-            console.log('Bot ' + (game.bots[i].getId() + 1) + ' scored ' + botPoints[i] + ' points!');
-            if (maxPoints < botPoints[i]) {
-              winners = [game.bots[i].getId() + 1];
-              maxPoints = botPoints[i];
-            } else if (maxPoints == botPoints[i]) {
-              winners.push(game.bots[i].getId() + 1);
-            }
-          }
-          if (winners.length > 1) {
-            console.log('Bots ' + winners + ' all tie for first!');
-          } else {
-            console.log('Bot ' + winners[0] + ' wins!');
-          }
-        }
-      } else {
-        let botsActions = [];
-
-        // Grab all the bots actions.
-        for (let i = 0; i < game.bots.length; ++i) {
-          botsActions.push(game.bots[i].computeNextMove(game.map));
-        }
-
-        game.updateMap(botsActions);
-        // Add still animations.
-        for (let y = 0; y < game.height; ++y) {
-          for (let x = 0; x < game.width; ++x) {
-            if (game.map[y][x].containsStillInsect()) {
-              game.canvas.pushAnimation(game.map[y][x].getInsect(), x, y, Move.STAY);
-            }
-          }
-        }
-        game.spawnBees();
-        game.resolveConflicts();
-        game.computeDamages();
-        game.calculatePollen();
-        gameEnded = game.didGameEnd(++turns);
-
-        game.canvas.animate(game.map, turn);
+      // Grab all the bots actions.
+      for (let i = 0; i < this.bots.length; ++i) {
+        botsActions.push(this.bots[i].computeNextMove(this.map));
       }
-    };
 
-    setTimeout(turn, 500);
+      this.updateMap(botsActions, turnsOutput);
+      // Add still animations.
+      for (let y = 0; y < this.height; ++y) {
+        for (let x = 0; x < this.width; ++x) {
+          if (this.map[y][x].containsStillInsect()) {
+            turnsOutput.push(Object.assign({ x, y, m: C.Move.STAY }, this.map[y][x].getInsect().getReplayData()));
+            //game.canvas.pushAnimation(game.map[y][x].getInsect(), x, y, Move.STAY);
+          }
+        }
+      }
+      this.spawnBees();
+      this.resolveConflicts();
+      this.computeDamages();
+      this.calculatePollen();
+      gameEnded = this.didGameEnd(turn + 1);
+      this.output.t.push({ i: this.getInsectData(), t: turnsOutput });
+      //     game.canvas.animate(game.map, turn);
+    }
+
+    if (!gameEnded) {
+      let botPoints = [];
+      botPoints.length = this.bots.length;
+      botPoints.fill(0);
+      for (let y = 0; y < this.height; ++y) {
+        for (let x = 0; x < this.width; ++x) {
+          let insect = this.map[y][x].getInsect();
+          if (insect) {
+            botPoints[insect.getBotId()] += insect.getCount();
+          }
+        }
+      }
+
+      for (let i = 0; i < botPoints.length; ++i) {
+        botPoints[i] += this.queenBees[i].getPollen() / 5;
+      }
+
+      console.log('The game has ended after ' + turn + ' turns. Here are the following scores:');
+      let winners = [];
+      let maxPoints = 0;
+      for (let i = 0; i < botPoints.length; ++i) {
+        console.log('Bot ' + (this.bots[i].getId() + 1) + ' scored ' + botPoints[i] + ' points!');
+        if (maxPoints < botPoints[i]) {
+          winners = [this.bots[i].getId() + 1];
+          maxPoints = botPoints[i];
+        } else if (maxPoints == botPoints[i]) {
+          winners.push(this.bots[i].getId() + 1);
+        }
+      }
+      if (winners.length > 1) {
+        console.log('Bots ' + winners + ' all tie for first!');
+      } else {
+        console.log('Bot ' + winners[0] + ' wins!');
+      }
+    }
+
+    fileStream.writeFile("replay", JSON.stringify(this.output), function (err) {
+      if (err) {
+        console.log(err);
+      }
+
+      console.log("Replay created.");
+    });
   }
 
   // Aggregate all the actions into the map.
-  updateMap(botsActions) {
-    this.canvas.resetAnimations();
+  updateMap(botsActions, turnsOutput) {
+   // this.canvas.resetAnimations();
 
     for (let i = 0; i < this.bots.length; ++i) {
       let bot = this.bots[i];
@@ -196,21 +199,22 @@ class Game {
         let insect = this.map[y][x].getInsect();
         if (insect.getBotId() == bot.getId()) {
           switch (action.getMove()) {
-            case Move.UP:
-              this.makeMove((this.height + y - 1) % this.height, x, y, x, action);
+            case C.Move.UP:
+              this.makeMove((this.height + y - 1) % this.height, x, y, x, action, turnsOutput);
               break;
-            case Move.RIGHT:
-              this.makeMove(y, (x + 1) % this.width, y, x, action);
+            case C.Move.RIGHT:
+              this.makeMove(y, (x + 1) % this.width, y, x, action, turnsOutput);
               break;
-            case Move.DOWN:
-              this.makeMove((y + 1) % this.height, x, y, x, action);
+            case C.Move.DOWN:
+              this.makeMove((y + 1) % this.height, x, y, x, action, turnsOutput);
               break;
-            case Move.LEFT:
-              this.makeMove(y, (this.width + x - 1) % this.width, y, x, action);
+            case C.Move.LEFT:
+              this.makeMove(y, (this.width + x - 1) % this.width, y, x, action, turnsOutput);
               break;
             default:
-              this.map[y][x].getInsect().changeFace(action.getFace());
-              this.canvas.pushAnimation(insect, x, y , Move.STAY);
+              insect.changeFace(action.getFace());
+              turnsOutput.push(Object.assign({ x, y, m: C.Move.STAY }, insect.getReplayData()));
+     //         this.canvas.pushAnimation(insect, x, y , Move.STAY);
               break;
           }
         } // Else invalid action.
@@ -218,7 +222,7 @@ class Game {
     }
   }
 
-  makeMove(newY, newX, currY, currX, action) {
+  makeMove(newY, newX, currY, currX, action, turnsOutput) {
     if (action.getAmount() > 0) {
       let insect = this.map[currY][currX].getInsect();
       // Case when user doesn't move all bees off the square
@@ -233,12 +237,14 @@ class Game {
           pollenToGive
         );
         this.map[newY][newX].pushInsect(newInsect);
-        this.canvas.pushAnimation(newInsect, currX, currY, action.getMove());
+   //     this.canvas.pushAnimation(newInsect, currX, currY, action.getMove());
+        turnsOutput.push(Object.assign({ x: currX, y: currY, m: action.getMove() }, newInsect.getReplayData()));
       } else {
         let insect = this.map[currY][currX].shiftInsect();
         insect.changeFace(action.getFace());
         this.map[newY][newX].pushInsect(insect);
-        this.canvas.pushAnimation(insect, currX, currY, action.getMove());
+  //      this.canvas.pushAnimation(insect, currX, currY, action.getMove());
+        turnsOutput.push(Object.assign({ x: currX, y: currY, m: action.getMove() }, insect.getReplayData()));
       }
     }
   }
@@ -248,21 +254,21 @@ class Game {
     for (let y = 0; y < this.height; ++y) {
       for (let x = 0; x < this.width; ++x) {
         let insect = this.map[y][x].getInsect();
-        if (insect && insect.getType() == InsectType.QUEENBEE) {
+        if (insect && insect.getType() == C.InsectType.QUEENBEE) {
           let bees = insect.spawnBees();
           if (bees > 0) {
             let newBees = new Bee(this.insectId++, insect.getBotId(), insect.getFace(), bees);
             switch (insect.getFace()) {
-              case Face.UP:
+              case C.Face.UP:
                 this.map[(y + 1) % this.height][x].pushInsect(newBees);
                 break;
-              case Face.RIGHT:
+              case C.Face.RIGHT:
                 this.map[y][(this.width + x - 1) % this.width].pushInsect(newBees);
                 break;
-              case Face.DOWN:
+              case C.Face.DOWN:
                 this.map[(this.height + y - 1) % this.height][x].pushInsect(newBees);
                 break;
-              case Face.LEFT:
+              case C.Face.LEFT:
                 this.map[y][(x + 1) % this.width].pushInsect(newBees);
                 break;
             }
@@ -291,7 +297,7 @@ class Game {
     for (let y = 0; y < this.height; ++y) {
       for (let x = 0; x < this.width; ++x) {
         let insect = this.map[y][x].getInsect();
-        if (insect && insect.getType() == InsectType.QUEENBEE) {
+        if (insect && insect.getType() == C.InsectType.QUEENBEE) {
           this.maybeHarvestPollen(insect, y + 1, x - 1);
           this.maybeHarvestPollen(insect, y + 1, x);
           this.maybeHarvestPollen(insect, y + 1, x + 1);
@@ -321,7 +327,7 @@ class Game {
     for (let y = 0; y < this.height && isWinPossible; ++y) {
       for (let x = 0; x < this.width && isWinPossible; ++x) {
         let insect = this.map[y][x].getInsect();
-        if (insect && insect.getType != InsectType.QUEENBEE) {
+        if (insect && insect.getType != C.InsectType.QUEENBEE) {
           if (winningId == -1) {
             winningId = insect.getBotId();
           } else if (winningId != insect.getBotId()) {
@@ -351,11 +357,38 @@ class Game {
       queenBee.takePollen(insect.depositPollen());
     }
   }
+
+  getMapReplayData() {
+    let replayMap = [];
+    replayMap.length = this.map.length;
+    for (let y = 0; y < this.map.length; ++y) {
+      (replayMap[y] = []).length = this.map[y].length;
+      for (let x = 0; x < this.map[y].length; ++x) {
+        replayMap[y][x] = this.map[y][x].getReplayData();
+      }
+    }
+    return replayMap;
+  }
+
+  getInsectData() {
+    let insectData = [];
+    for (let y = 0; y < this.map.length; ++y) {
+      for (let x = 0; x < this.map[y].length; ++x) {
+        let insect = this.map[y][x].getInsect();
+        if (insect != null) {
+          insectData.push(Object.assign({ x, y }, insect.getReplayData()));
+        }
+      }
+    }
+    return insectData;
+  }
 }
 
 function start() {
   new Game();
 }
+
+new Game();
 
 /*
 Design game and stuff...
