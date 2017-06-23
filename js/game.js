@@ -198,22 +198,19 @@ class Game {
           switch (action.getMove()) {
             case Move.UP:
               this.makeMove((this.height + y - 1) % this.height, x, y, x, action);
-              this.canvas.pushAnimation(insect, x, y, Move.UP);
               break;
             case Move.RIGHT:
               this.makeMove(y, (x + 1) % this.width, y, x, action);
-              this.canvas.pushAnimation(insect, x, y, Move.RIGHT);
               break;
             case Move.DOWN:
               this.makeMove((y + 1) % this.height, x, y, x, action);
-              this.canvas.pushAnimation(insect, x, y, Move.DOWN);
               break;
             case Move.LEFT:
               this.makeMove(y, (this.width + x - 1) % this.width, y, x, action);
-              this.canvas.pushAnimation(insect, x, y, Move.LEFT);
               break;
             default:
               this.map[y][x].getInsect().changeFace(action.getFace());
+              this.canvas.pushAnimation(insect, x, y , Move.STAY);
               break;
           }
         } // Else invalid action.
@@ -228,19 +225,20 @@ class Game {
       if (action.getAmount() < insect.getCount()) {
         let pollenToGive = insect.splitOff(action.getAmount());
         // TODO: Need to distinguish whether bee or wasp.
-        this.map[newY][newX].pushInsect(
-          new Bee(
-            this.insectId++,
-            insect.getBotId(),
-            action.getFace(),
-            action.getAmount(),
-            pollenToGive
-          )
+        let newInsect = new Bee(
+          this.insectId++,
+          insect.getBotId(),
+          action.getFace(),
+          action.getAmount(),
+          pollenToGive
         );
+        this.map[newY][newX].pushInsect(newInsect);
+        this.canvas.pushAnimation(newInsect, currX, currY, action.getMove());
       } else {
         let insect = this.map[currY][currX].shiftInsect();
         insect.changeFace(action.getFace());
         this.map[newY][newX].pushInsect(insect);
+        this.canvas.pushAnimation(insect, currX, currY, action.getMove());
       }
     }
   }

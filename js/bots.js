@@ -46,7 +46,7 @@ class RandomBot extends Bot {
       for (let x = 0; x < map[y].length; ++x) {
         let insect = map[y][x].getInsect();
         if (insect && insect.getBotId() == this.id) {
-          moves.push(new Action(x, y, Math.floor(Math.random() * 5), Math.floor(Math.random() * 4), insect.getCount()));
+          moves.push(new Action(x, y, Math.floor(Math.random() * 5), Math.floor(Math.random() * 4), Math.floor(Math.random() * (insect.getCount() + 1))));
         }
       }
     }

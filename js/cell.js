@@ -124,6 +124,7 @@ class Cell {
             break;
           }
           primeInsect.addCount(mergeInsect.getCount());
+          primeInsect.collectPollen(mergeInsect.getPollen());
         }
 
         if (primeInsect && primeInsect.getCount() > 0) {
