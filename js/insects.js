@@ -70,6 +70,10 @@ exports.Insect = class Insect {
   collectPollen(amount) {
 
   }
+
+  addPollen(amount) {
+    this.pollen += amount;
+  }
 };
 
 exports.QueenBee = class QueenBee extends exports.Insect {

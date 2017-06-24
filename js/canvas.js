@@ -38,7 +38,7 @@ for (let i = 0; i < 2; ++i) {
 }
 
 const ANIMATION_TIME = 500;
-const PAUSE_TIME = 1500;
+const PAUSE_TIME = 200;
 const GRID_COLOUR = '#43a047';
 const TEXT_COLOUR = '#424242';
 
@@ -78,6 +78,8 @@ class Canvas {
   }
 
   load(replay) {
+    cancelAnimationFrame(this.animationFrame);
+    clearTimeout(this.animateEvent);
     this.xStep = this.width / replay.m.length;
     this.yStep = this.height / replay.m[0].length;
     this.insectSize = Math.min(this.xStep / 2 - 8, this.yStep / 2 - 8);
@@ -123,6 +125,7 @@ class Canvas {
   }
 
   animate() {
+    cancelAnimationFrame(this.animationFrame);
     clearTimeout(this.animateEvent);
     let lastAnimationTime = (new Date()).getTime();
     let totalTime = 0;
@@ -184,18 +187,18 @@ class Canvas {
       }
 
       if (totalTime < ANIMATION_TIME) {
-        requestAnimationFrame(animateFrame);
+        canvas.animationFrame = requestAnimationFrame(animateFrame);
       } else {
         canvas.drawFinalMap();
 
         ++canvas.turn;
         if (canvas.turn < canvas.turns.length) {
-          //canvas.animateEvent = setTimeout(canvas.animate.bind(canvas), PAUSE_TIME);
+          canvas.animateEvent = setTimeout(canvas.animate.bind(canvas), PAUSE_TIME);
         }
       }
     };
 
-    requestAnimationFrame(animateFrame);
+    this.animationFrame = requestAnimationFrame(animateFrame);
   }
 
   getImage(botId, type) {
