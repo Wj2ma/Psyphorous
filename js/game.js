@@ -63,18 +63,18 @@ class Game {
             this.map[y][x] = new Cell(y, x, C.Flower.POTENT);
             break;
           case 'W1':
-            this.map[y][x] = new Cell(y, x, C.Flower.NONE, new Bee(this.insectId++, this.bots[0].getId()));
+            this.map[y][x] = new Cell(y, x, C.Flower.NONE, new Bee(this.insectId++, this.bots[0].getId(), C.Face.UP, x, y));
             break;
           case 'Q1':
-            queenBee = new QueenBee(this.insectId++, this.bots[0].getId());
+            queenBee = new QueenBee(this.insectId++, this.bots[0].getId(), C.Face.UP, x, y);
             this.queenBees.push(queenBee);
             this.map[y][x] = new Cell(y, x, C.Flower.NONE, queenBee);
             break;
           case 'W2':
-            this.map[y][x] = new Cell(y, x, C.Flower.NONE, new Bee(this.insectId++, this.bots[1].getId()));
+            this.map[y][x] = new Cell(y, x, C.Flower.NONE, new Bee(this.insectId++, this.bots[1].getId(), C.Face.UP, x, y));
             break;
           case 'Q2':
-            queenBee = new QueenBee(this.insectId++, this.bots[1].getId());
+            queenBee = new QueenBee(this.insectId++, this.bots[1].getId(), C.Face.UP, x, y);
             this.queenBees.push(queenBee);
             this.map[y][x] = new Cell(y, x, C.Flower.NONE, queenBee);
             break;
@@ -84,26 +84,7 @@ class Game {
       }
     }
 
-    // let creatureIds = 0;
-    // (this.map = []).length = height;
-    // for (let y = 0; y < height; ++y) {
-    //   (this.map[y] = []).length = width;
-    //   for (let x = 0; x < width; ++x) {
-    //     // TODO: This part is hardcoded to 2 bots and set locations. Need to change later.
-    //     if (y == 1 && x >= 1 && x <= width - 2) {
-    //       this.map[y][x] = [new Cell(bots[0].getId(), new Skeleton(creatureIds++))];
-    //     } else if (y == height - 2 && x >= 1 && x <= width - 2) {
-    //       this.map[y][x] = [new Cell(bots[1].getId(), new Skeleton(creatureIds++))];
-    //     } else {
-    //       this.map[y][x] = [NEUTRAL_CELL];
-    //     }
-    //   }
-    // }
-
-    // this.canvas = new Canvas(width, height);
-
-  //  this.canvas = new Canvas(10, 10);
-    this.output = { m: this.getMapReplayData(), t: [] };
+    this.output = { m: this.getMapReplayData(), t: [], i: this.getInsectReplayData() };
 
     this.runGame();
   }
@@ -113,7 +94,7 @@ class Game {
     let turn = 0;
 
     for (; turn < C.MAX_TURNS/*10 * Math.sqrt(game.width * game.height)*/ && !gameEnded; ++turn) {
-      let turnsOutput = [];
+      let turnsOutput = { t: [], n: [], u: {} };
       let botsActions = [];
 
       // Grab all the bots actions.
@@ -122,22 +103,14 @@ class Game {
       }
 
       this.updateMap(botsActions, turnsOutput);
-      // Add still animations.
-      for (let y = 0; y < this.height; ++y) {
-        for (let x = 0; x < this.width; ++x) {
-          if (this.map[y][x].containsStillInsect()) {
-            turnsOutput.push(Object.assign({ x, y, m: C.Move.STAY }, this.map[y][x].getInsect().getReplayData()));
-            //game.canvas.pushAnimation(game.map[y][x].getInsect(), x, y, Move.STAY);
-          }
-        }
-      }
       this.spawnBees();
       this.resolveConflicts();
       this.computeDamages();
       this.calculatePollen();
       gameEnded = this.didGameEnd(turn + 1);
-      this.output.t.push({ i: this.getInsectData(), t: turnsOutput });
-      //     game.canvas.animate(game.map, turn);
+
+      turnsOutput.i = this.getInsectReplayData();
+      this.output.t.push(turnsOutput);
     }
 
     if (!gameEnded) {
@@ -187,8 +160,6 @@ class Game {
 
   // Aggregate all the actions into the map.
   updateMap(botsActions, turnsOutput) {
-   // this.canvas.resetAnimations();
-
     for (let i = 0; i < this.bots.length; ++i) {
       let bot = this.bots[i];
       let botActions = botsActions[i];
@@ -197,7 +168,9 @@ class Game {
         let x = action.getX();
         let y = action.getY();
         let insect = this.map[y][x].getInsect();
-        if (insect.getBotId() == bot.getId()) {
+        let pos = insect.getPosition();
+        // Validate that the insect belongs to this bot, and also it has not been moved yet.
+        if (insect.getBotId() == bot.getId() && pos.x == x && pos.y == y) {
           switch (action.getMove()) {
             case C.Move.UP:
               this.makeMove((this.height + y - 1) % this.height, x, y, x, action, turnsOutput);
@@ -213,8 +186,6 @@ class Game {
               break;
             default:
               insect.changeFace(action.getFace());
-              turnsOutput.push(Object.assign({ x, y, m: C.Move.STAY }, insect.getReplayData()));
-     //         this.canvas.pushAnimation(insect, x, y , Move.STAY);
               break;
           }
         } // Else invalid action.
@@ -233,47 +204,47 @@ class Game {
           this.insectId++,
           insect.getBotId(),
           action.getFace(),
+          newX,
+          newY,
           action.getAmount(),
           pollenToGive
         );
         this.map[newY][newX].pushInsect(newInsect);
-   //     this.canvas.pushAnimation(newInsect, currX, currY, action.getMove());
-        turnsOutput.push(Object.assign({ x: currX, y: currY, m: action.getMove() }, newInsect.getReplayData()));
+        turnsOutput.n.push(Object.assign({ x: currX, y: currY }, newInsect.getReplayData()));
+        turnsOutput.u[insect.getId()] = { c: insect.getCount(), p: insect.getPollen() };
+        turnsOutput.t.push({ i: newInsect.getId(), m: action.getMove() });
       } else {
         let insect = this.map[currY][currX].shiftInsect();
         insect.changeFace(action.getFace());
+        insect.setPosition({ x: newX, y: newY });
         this.map[newY][newX].pushInsect(insect);
-  //      this.canvas.pushAnimation(insect, currX, currY, action.getMove());
-        turnsOutput.push(Object.assign({ x: currX, y: currY, m: action.getMove() }, insect.getReplayData()));
+        turnsOutput.t.push({ i: insect.getId(), m: action.getMove() });
       }
     }
   }
 
   // Spawn bees if sufficient pollen is made.
   spawnBees() {
-    for (let y = 0; y < this.height; ++y) {
-      for (let x = 0; x < this.width; ++x) {
-        let insect = this.map[y][x].getInsect();
-        if (insect && insect.getType() == C.InsectType.QUEENBEE) {
-          let bees = insect.spawnBees();
-          if (bees > 0) {
-            let newBees = new Bee(this.insectId++, insect.getBotId(), insect.getFace(), bees);
-            switch (insect.getFace()) {
-              case C.Face.UP:
-                this.map[(y + 1) % this.height][x].pushInsect(newBees);
-                break;
-              case C.Face.RIGHT:
-                this.map[y][(this.width + x - 1) % this.width].pushInsect(newBees);
-                break;
-              case C.Face.DOWN:
-                this.map[(this.height + y - 1) % this.height][x].pushInsect(newBees);
-                break;
-              case C.Face.LEFT:
-                this.map[y][(x + 1) % this.width].pushInsect(newBees);
-                break;
-            }
-          }
+    for (let queenBee of this.queenBees) {
+      let bees = queenBee.spawnBees();
+      if (bees > 0) {
+        let pos = queenBee.getPosition();
+        switch (queenBee.getFace()) {
+          case C.Face.UP:
+            pos.y = (pos.y + 1) % this.height;
+            break;
+          case C.Face.RIGHT:
+            pos.x = (this.width + pos.x - 1) % this.width;
+            break;
+          case C.Face.DOWN:
+            pos.y = (this.height + pos.y - 1) % this.height;
+            break;
+          case C.Face.LEFT:
+            pos.x = (pos.x + 1) % this.width;
+            break;
         }
+        this.map[pos.y][pos.x].pushInsect(
+          new Bee(this.insectId++, queenBee.getBotId(), queenBee.getFace(), pos.x, pos.y, bees));
       }
     }
   }
@@ -294,20 +265,16 @@ class Game {
   }
 
   calculatePollen() {
-    for (let y = 0; y < this.height; ++y) {
-      for (let x = 0; x < this.width; ++x) {
-        let insect = this.map[y][x].getInsect();
-        if (insect && insect.getType() == C.InsectType.QUEENBEE) {
-          this.maybeHarvestPollen(insect, y + 1, x - 1);
-          this.maybeHarvestPollen(insect, y + 1, x);
-          this.maybeHarvestPollen(insect, y + 1, x + 1);
-          this.maybeHarvestPollen(insect, y - 1, x - 1);
-          this.maybeHarvestPollen(insect, y - 1, x);
-          this.maybeHarvestPollen(insect, y - 1, x + 1);
-          this.maybeHarvestPollen(insect, y, x - 1);
-          this.maybeHarvestPollen(insect, y, x + 1);
-        }
-      }
+    for (let queenBee of this.queenBees) {
+      let pos = queenBee.getPosition();
+      this.maybeHarvestPollen(queenBee, pos.y + 1, pos.x - 1);
+      this.maybeHarvestPollen(queenBee, pos.y + 1, pos.x);
+      this.maybeHarvestPollen(queenBee, pos.y + 1, pos.x + 1);
+      this.maybeHarvestPollen(queenBee, pos.y - 1, pos.x - 1);
+      this.maybeHarvestPollen(queenBee, pos.y - 1, pos.x);
+      this.maybeHarvestPollen(queenBee, pos.y - 1, pos.x + 1);
+      this.maybeHarvestPollen(queenBee, pos.y, pos.x - 1);
+      this.maybeHarvestPollen(queenBee, pos.y, pos.x + 1);
     }
 
     for (let y = 0; y < this.height; ++y) {
@@ -370,7 +337,7 @@ class Game {
     return replayMap;
   }
 
-  getInsectData() {
+  getInsectReplayData() {
     let insectData = [];
     for (let y = 0; y < this.map.length; ++y) {
       for (let x = 0; x < this.map[y].length; ++x) {
@@ -389,46 +356,3 @@ function start() {
 }
 
 new Game();
-
-/*
-Design game and stuff...
-
-- flowers around the map
-- start with n bees and 1 queen
-- queen does not collect pollen or attack
-- if bee is on flower, they collect pollen
-- bees have a maximum capacity of pollen to carry
-- bees also stack in cells (can split)
-- bring back pollen to queen bee to produce more bees
-- instant pollen when move to a flower, must stay to continue harvesting pollen and will not be able to attack
-- bees stack
-- 5 pollen == 1 bee
-- max 3 pollen per bee
-- max 100 bees
--more potent flowers and less potent that give more pollen per round
--if bee dies, pollen can be picked up, or it can be removed from the game
-- every attack on queen bee will need to be replenished with pollen. For example, if she was hit 3 times, she would need 3 pollen before being able to produce more bees.
-
-Attack
-- hit 3 where you are facing or hit 3 in a straight line
-
-Moves:
-UP
-DOWN
-RIGHT
-LEFT
-STAY/HARVEST
-
-AfterMoves:
-FACE_UP
-FACE_DOWN
-FACE_RIGHT
-FACE_LEFT
-
-Each turn:
-Move
-Face direction
-Spawn
-Attack
-Grab Pollen
-*/

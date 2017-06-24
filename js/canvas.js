@@ -6,20 +6,34 @@ Replay file is in the following format
     [{ p: 0 }, { p: 1 }],
     [{ p: 1 }, { p: 2 }]
   ],
+  // Insect data for first turn.
+  i: [
+    { x: 4, y: 10, i: 15, b: 2, c: 15, f: 0, p: 10, t: 0 }
+  ],
   // Turns is an array where each item represents a turn's data.
   t: [
     {
       // Insect data contains the final placements of each insect.
       // x = x position of insect
       // y = y position of insect
-      // i = botId of insect
+      // i = id of insect
+      // b = botId of insect
       // c = insect count
       // f = insect face
       // p = insect pollen count
       // t = insect type
-      i: [{ x: 4, y: 10, i: 2, c: 15, f: 0, p: 10, t: 0}],
-      // Turn data contains the list of moves for each insect. Parameters are the same as insect data, except m = move.
-      t: [{ x: 1, y: 7, m: 1, i: 1, c: 12, f: 2, p: 2, t: 1 }]
+      i: [{ x: 4, y: 10, i: 15, b: 2, c: 15, f: 0, p: 10, t: 0 }],
+      // Turn data contains the list of moves for each insect.
+      // i = id of insect
+      // m = move
+      t: [{ i: 15, m: 1 }],
+      // New insects contains the insects that split off from a group. The parameters are the same as insect data
+      n: [{ x: 3, y: 3, i: 28, b: 1, c: 7, f: 0, p: 4, t: 0 }],
+      // Updated insects contains the updated count and pollen for an existing insect that split into new insect groups.
+      // The key is the insect ID
+      // c = count
+      // p = pollen
+      u: { 3: { c: 2, p: 3 } }
     }
   ]
 }
@@ -86,7 +100,37 @@ class Canvas {
     this.map = replay.m;
     this.turns = replay.t;
     this.turn = 0;
+    this.insects = {};
+    this.initialInsects = replay.i;
+    this.addInsects(this.initialInsects);
+
     this.animate();
+  }
+
+  resetAndUpdateInsects(insects) {
+    this.insects = {};
+    this.addInsects(insects);
+  }
+
+  addInsects(newInsects) {
+    for (let insect of newInsects) {
+      let insectClone = Object.assign({}, insect);
+      insectClone.x = this.mapXCoordToPixels(insectClone.x);
+      insectClone.y = this.mapYCoordToPixels(insectClone.y);
+      this.insects[insectClone.i] = insectClone;
+    }
+  }
+
+  jumpToTurn(turn) {
+    if (turn < this.turns.length) {
+      this.turn = turn;
+      if (turn == 0) {
+        this.resetAndUpdateInsects(this.initialInsects);
+      } else {
+        this.resetAndUpdateInsects(this.turns[turn - 1].i);
+      }
+      this.animate();
+    }
   }
 
   // Maps x unit to the center of its grid position in pixels.
@@ -131,10 +175,22 @@ class Canvas {
     let totalTime = 0;
     let canvas = this;
 
-    let animations = this.turns[this.turn].t;
-    for (let an of animations) {
-      an.x = canvas.mapXCoordToPixels(an.x);
-      an.y = canvas.mapYCoordToPixels(an.y);
+    // Add any new insects.
+    this.addInsects(this.turns[this.turn].n);
+
+    // Update existing insects that changed counts or pollen.
+    let updates = this.turns[this.turn].u;
+    for (let id in updates) {
+      let insect = this.insects[id];
+      let update = updates[id];
+      insect.c = update.c;
+      insect.p = update.p;
+    }
+
+    // Update insect moves.
+    let moves = this.turns[this.turn].t;
+    for (let m of moves) {
+      this.insects[m.i].m = m.m;
     }
 
     let animateFrame = function() {
@@ -146,7 +202,19 @@ class Canvas {
       canvas.drawGrid();
       canvas.drawFlowers();
 
-      for (let an of animations) {
+      if (totalTime < ANIMATION_TIME) {
+        canvas.animationFrame = requestAnimationFrame(animateFrame);
+      } else {
+        // Reset list of insects and update to the end result.
+        canvas.resetAndUpdateInsects(canvas.turns[canvas.turn].i);
+
+        ++canvas.turn;
+        if (canvas.turn < canvas.turns.length) {
+          canvas.animateEvent = setTimeout(canvas.animate.bind(canvas), PAUSE_TIME);
+        }
+      }
+
+      for (let an of Object.values(canvas.insects)) {
         let movementFace = an.f;
         switch (an.m) {
           case Move.UP:
@@ -167,7 +235,7 @@ class Canvas {
             break;
         }
 
-        let img = canvas.getImage(an.i, an.t);
+        let img = canvas.getImage(an.b, an.t);
 
         // Main creature.
         canvas.drawInsect(an.x, an.y, img, movementFace, an.c, an.p);
@@ -183,17 +251,6 @@ class Canvas {
           canvas.drawInsect(an.x, an.y - canvas.height, img, movementFace, an.c, an.p);
         } else if (an.y < canvas.insectSize) {
           canvas.drawInsect(an.x, an.y + canvas.height, img, movementFace, an.c, an.p);
-        }
-      }
-
-      if (totalTime < ANIMATION_TIME) {
-        canvas.animationFrame = requestAnimationFrame(animateFrame);
-      } else {
-        canvas.drawFinalMap();
-
-        ++canvas.turn;
-        if (canvas.turn < canvas.turns.length) {
-          canvas.animateEvent = setTimeout(canvas.animate.bind(canvas), PAUSE_TIME);
         }
       }
     };
@@ -245,25 +302,6 @@ class Canvas {
         y + this.yStep / 2 - this.insectSize,
         this.insectSize * 2,
         this.insectSize * 2
-      );
-    }
-  }
-
-  drawFinalMap() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
-
-    this.drawGrid();
-    this.drawFlowers();
-
-    let insects = this.turns[this.turn].i;
-    for (let insect of insects) {
-      this.drawInsect(
-        this.mapXCoordToPixels(insect.x),
-        this.mapYCoordToPixels(insect.y),
-        this.getImage(insect.i, insect.t),
-        insect.f,
-        insect.c,
-        insect.p
       );
     }
   }
