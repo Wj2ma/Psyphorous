@@ -102,7 +102,7 @@ exports.HarvesterBot = class HarvesterBot extends exports.Bot {
             minPath = path;
           }
         }
-        moves.push(new Action(beeCell.getX(), beeCell.getY(), minPath.move, minPath.move - 1, insect.getCount()));
+        moves.push(new Action(beeCell.getX(), beeCell.getY(), minPath.move, minPath.move - 1, Math.floor(Math.random() * (insect.getCount() + 1))));
       }
     }
 

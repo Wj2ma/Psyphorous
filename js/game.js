@@ -84,7 +84,7 @@ class Game {
       }
     }
 
-    this.output = { m: this.getMapReplayData(), t: [], i: this.getInsectReplayData() };
+    this.output = { m: this.getMapReplayData(), t: [{ t: [], n: [], u: { }, i: this.getInsectReplayData() }] };
 
     this.runGame();
   }
@@ -93,7 +93,7 @@ class Game {
     let gameEnded = false;
     let turn = 0;
 
-    for (; turn < C.MAX_TURNS/*10 * Math.sqrt(game.width * game.height)*/ && !gameEnded; ++turn) {
+    for (; turn < C.MAX_TURNS /*10 * Math.sqrt(this.width * this.height)*/ && !gameEnded; ++turn) {
       let turnsOutput = { t: [], n: [], u: {} };
       let botsActions = [];
 

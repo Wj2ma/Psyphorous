@@ -99,10 +99,7 @@ class Canvas {
     this.insectSize = Math.min(this.xStep / 2 - 8, this.yStep / 2 - 8);
     this.map = replay.m;
     this.turns = replay.t;
-    this.turn = 0;
-    this.insects = {};
-    this.initialInsects = replay.i;
-    this.addInsects(this.initialInsects);
+    this.turn = 1;
 
     this.animate();
   }
@@ -124,11 +121,7 @@ class Canvas {
   jumpToTurn(turn) {
     if (turn < this.turns.length) {
       this.turn = turn;
-      if (turn == 0) {
-        this.resetAndUpdateInsects(this.initialInsects);
-      } else {
-        this.resetAndUpdateInsects(this.turns[turn - 1].i);
-      }
+      this.resetAndUpdateInsects(this.turns[turn - 1].i);
       this.animate();
     }
   }
@@ -175,6 +168,9 @@ class Canvas {
     let totalTime = 0;
     let canvas = this;
 
+    // Reset list of insects and update to the end result of previous turn.
+    canvas.resetAndUpdateInsects(canvas.turns[canvas.turn - 1].i);
+
     // Add any new insects.
     this.addInsects(this.turns[this.turn].n);
 
@@ -205,9 +201,6 @@ class Canvas {
       if (totalTime < ANIMATION_TIME) {
         canvas.animationFrame = requestAnimationFrame(animateFrame);
       } else {
-        // Reset list of insects and update to the end result.
-        canvas.resetAndUpdateInsects(canvas.turns[canvas.turn].i);
-
         ++canvas.turn;
         if (canvas.turn < canvas.turns.length) {
           canvas.animateEvent = setTimeout(canvas.animate.bind(canvas), PAUSE_TIME);
