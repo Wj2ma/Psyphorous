@@ -100,7 +100,7 @@ exports.Cell =  class Cell {
             break;
           }
 
-          if (killType == InsectType.QUEENBEE) {
+          if (killType == C.InsectType.QUEENBEE) {
             insect.takeDamage(maxAttackPower);
           } else {
             let killAmount = insect.getKillAmount();
