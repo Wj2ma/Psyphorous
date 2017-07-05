@@ -6,10 +6,6 @@ Replay file is in the following format
     [{ p: 0 }, { p: 1 }],
     [{ p: 1 }, { p: 2 }]
   ],
-  // Insect data for first turn.
-  i: [
-    { x: 4, y: 10, i: 15, b: 2, c: 15, f: 0, p: 10, t: 0 }
-  ],
   // Turns is an array where each item represents a turn's data.
   t: [
     {
@@ -89,6 +85,11 @@ class Canvas {
     this.width = canvas.width;
     this.height = canvas.height;
     this.ctx = canvas.getContext('2d');
+    let context = this;
+    this.turnBox = document.getElementById('turn');
+    this.turnBox.addEventListener('change', function (e) {
+      context.jumpToTurn(this.value);
+    });
   }
 
   load(replay) {
@@ -99,14 +100,18 @@ class Canvas {
     this.insectSize = Math.min(this.xStep / 2 - 8, this.yStep / 2 - 8);
     this.map = replay.m;
     this.turns = replay.t;
+    this.turnBox.max = this.turns.length - 1;
     this.turn = 1;
+    this.paused = false;
 
-    this.animate();
+    this.resetAndUpdateInsects(this.turns[0].i);
+    this.animateEvent = setTimeout(this.animate.bind(this), PAUSE_TIME);
   }
 
   resetAndUpdateInsects(insects) {
     this.insects = {};
     this.addInsects(insects);
+    this.drawFinalMap();
   }
 
   addInsects(newInsects) {
@@ -122,8 +127,18 @@ class Canvas {
     if (turn < this.turns.length) {
       this.turn = turn;
       this.resetAndUpdateInsects(this.turns[turn - 1].i);
-      this.animate();
+      if (!this.paused) {
+        this.animateEvent = setTimeout(this.animate.bind(this), PAUSE_TIME);
+      }
     }
+  }
+
+  pauseOrResume() {
+    this.paused = !this.paused;
+    if (!this.paused) {
+      this.animateEvent = setTimeout(this.animate.bind(this), PAUSE_TIME);
+    }
+    return this.paused;
   }
 
   // Maps x unit to the center of its grid position in pixels.
@@ -164,12 +179,10 @@ class Canvas {
   animate() {
     cancelAnimationFrame(this.animationFrame);
     clearTimeout(this.animateEvent);
+    this.turnBox.value = this.turn;
     let lastAnimationTime = (new Date()).getTime();
     let totalTime = 0;
     let canvas = this;
-
-    // Reset list of insects and update to the end result of previous turn.
-    canvas.resetAndUpdateInsects(canvas.turns[canvas.turn - 1].i);
 
     // Add any new insects.
     this.addInsects(this.turns[this.turn].n);
@@ -197,15 +210,6 @@ class Canvas {
       canvas.ctx.clearRect(0, 0, canvas.width, canvas.height);
       canvas.drawGrid();
       canvas.drawFlowers();
-
-      if (totalTime < ANIMATION_TIME) {
-        canvas.animationFrame = requestAnimationFrame(animateFrame);
-      } else {
-        ++canvas.turn;
-        if (canvas.turn < canvas.turns.length) {
-          canvas.animateEvent = setTimeout(canvas.animate.bind(canvas), PAUSE_TIME);
-        }
-      }
 
       for (let an of Object.values(canvas.insects)) {
         let movementFace = an.f;
@@ -245,6 +249,19 @@ class Canvas {
         } else if (an.y < canvas.insectSize) {
           canvas.drawInsect(an.x, an.y + canvas.height, img, movementFace, an.c, an.p);
         }
+      }
+
+      if (totalTime < ANIMATION_TIME) {
+          canvas.animationFrame = requestAnimationFrame(animateFrame);
+      } else {
+          // Reset list of insects and update to the end result of previous turn.
+          canvas.resetAndUpdateInsects(canvas.turns[canvas.turn].i);
+
+          ++canvas.turn;
+
+          if (canvas.turn < canvas.turns.length && !canvas.paused) {
+            canvas.animateEvent = setTimeout(canvas.animate.bind(canvas), PAUSE_TIME);
+          }
       }
     };
 
@@ -298,6 +315,24 @@ class Canvas {
       );
     }
   }
+
+  drawFinalMap() {
+    this.ctx.clearRect(0, 0, this.width, this.height);
+
+    this.drawGrid();
+    this.drawFlowers();
+
+    for (let insect of Object.values(this.insects)) {
+      this.drawInsect(
+        insect.x,
+        insect.y,
+        this.getImage(insect.b, insect.t),
+        insect.f,
+        insect.c,
+        insect.p
+      );
+    }
+  }
 }
 
 let canvas;
@@ -323,3 +358,13 @@ document.addEventListener('DOMContentLoaded', function() {
     e.preventDefault();
   });
 });
+
+function pauseOrResume() {
+  let paused = canvas.pauseOrResume();
+  let pauseButton = document.getElementById('pauseResume');
+  if (paused) {
+    pauseButton.value = "Resume";
+  } else {
+    pauseButton.value = "Pause";
+  }
+}
