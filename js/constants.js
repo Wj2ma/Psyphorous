@@ -17,7 +17,7 @@ exports.Face = {
 exports.InsectType = {
   BEE: 0,
   WASP: 1,
-  QUEENBEE: 2
+  QUEEN: 2
 };
 
 exports.Flower = {
@@ -26,6 +26,6 @@ exports.Flower = {
   POTENT: 2
 };
 
-exports.KILL_PRIORITY = [ exports.InsectType.WASP, exports.InsectType.BEE, exports.InsectType.QUEENBEE ];
+exports.KILL_PRIORITY = [ exports.InsectType.WASP, exports.InsectType.BEE, exports.InsectType.QUEEN ];
 
-exports.MAX_TURNS = 20;
+exports.MAX_TURNS = 50;
