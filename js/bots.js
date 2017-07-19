@@ -66,21 +66,21 @@ exports.Bot = class Bot {
     return [];
   }
 
-  getPath(fromY, fromX, toY, toX) {
+  getPath(from, to) {
     let path = { };
 
-    let downDist = (this.height + toY - fromY) % this.height;
-    let upDist = (this.height + fromY - toY) % this.height;
-    let rightDist = (this.width + toX - fromX) % this.width;
-    let leftDist = (this.width + fromX - toX) % this.width;
+    let downDist = (this.height + to.y - from.y) % this.height;
+    let upDist = (this.height + from.y - to.y) % this.height;
+    let rightDist = (this.width + to.x - from.x) % this.width;
+    let leftDist = (this.width + from.x - to.x) % this.width;
 
-    if (toY != fromY) {
+    if (to.y != from.y) {
       if (downDist > upDist) {
         path.move = C.Move.UP;
       } else {
         path.move = C.Move.DOWN;
       }
-    } else if (toX != fromX) {
+    } else if (to.x != from.x) {
       if (rightDist > leftDist) {
         path.move = C.Move.LEFT;
       } else {
@@ -101,7 +101,7 @@ exports.RandomBot = class RandomBot extends exports.Bot {
       for (let x = 0; x < this.width; ++x) {
         let insect = this.map[y][x].getInsect();
         if (insect && insect.getBotId() == this.id) {
-          moves.push(new Action(x, y, Math.floor(Math.random() * 5), Math.floor(Math.random() * 4), Math.floor(Math.random() * (insect.getCount() + 1))));
+          moves.push(new Action({ x, y }, Math.floor(Math.random() * 5), Math.floor(Math.random() * 4), Math.floor(Math.random() * (insect.getCount() + 1))));
         }
       }
     }
@@ -142,23 +142,23 @@ exports.HarvesterBot = class HarvesterBot extends exports.Bot {
     for (let beeCell of beeCells) {
       let insect = beeCell.getInsect();
       if (insect.getPollen() >= this.minPollen * insect.getCount()) {
-        let path = this.getPath(beeCell.getY(), beeCell.getX(), queenBeeCell.getY(), queenBeeCell.getX());
-        moves.push(new Action(beeCell.getX(), beeCell.getY(), path.move, path.move - 1, insect.getCount()));
+        let path = this.getPath(beeCell.getPosition(), queenBeeCell.getPosition());
+        moves.push(new Action(beeCell.getPosition(), path.move, path.move - 1, insect.getCount()));
       } else if (beeCell.getPotency() == 0) {
         let flowerCell = flowerCells[0];
-        let minPath = this.getPath(beeCell.getY(), beeCell.getX(), flowerCell.getY(), flowerCell.getX());
+        let minPath = this.getPath(beeCell.getPosition(), flowerCell.getPosition());
         for (let i = 1; i < flowerCells.length; ++i) {
           flowerCell = flowerCells[i];
-          let path = this.getPath(beeCell.getY(), beeCell.getX(), flowerCell.getY(), flowerCell.getX());
+          let path = this.getPath(beeCell.getPosition(), flowerCell.getPosition());
           if (path.dist < minPath.dist) {
             minPath = path;
           }
         }
-        moves.push(new Action(beeCell.getX(), beeCell.getY(), minPath.move, minPath.move - 1, insect.getCount()));
+        moves.push(new Action(beeCell.getPosition(), minPath.move, minPath.move - 1, insect.getCount()));
       }
     }
 
-    moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), C.Move.STAY, Math.floor(Math.random() * 4), 1));
+    moves.push(new Action(queenBeeCell.getPosition(), C.Move.STAY, Math.floor(Math.random() * 4), 1));
 
     return moves;
   }
@@ -199,26 +199,26 @@ exports.PotentBot = class PotentBot extends exports.Bot {
     for (let beeCell of beeCells) {
       let insect = beeCell.getInsect();
       if (insect.getPollen() > this.minPollen * insect.getCount()) {
-        let path = this.getPath(beeCell.getY(), beeCell.getX(), queenBeeCell.getY(), queenBeeCell.getX());
-        moves.push(new Action(beeCell.getX(), beeCell.getY(), path.move, path.move - 1, insect.getCount()));
+        let path = this.getPath(beeCell.getPosition(), queenBeeCell.getPosition());
+        moves.push(new Action(beeCell.getPosition(), path.move, path.move - 1, insect.getCount()));
       } else if (beeCell.getPotency() != C.Flower.POTENT) {
         let flowerCell = flowerCells[0];
-        let minPath = this.getPath(beeCell.getY(), beeCell.getX(), flowerCell.getY(), flowerCell.getX());
+        let minPath = this.getPath(beeCell.getPosition(), flowerCell.getPosition());
         for (let i = 1; i < flowerCells.length; ++i) {
           flowerCell = flowerCells[i];
-          let path = this.getPath(beeCell.getY(), beeCell.getX(), flowerCell.getY(), flowerCell.getX());
+          let path = this.getPath(beeCell.getPosition(), flowerCell.getPosition());
           if (path.dist < minPath.dist) {
             minPath = path;
           }
         }
-        moves.push(new Action(beeCell.getX(), beeCell.getY(), minPath.move, minPath.move - 1, insect.getCount()));
+        moves.push(new Action(beeCell.getPosition(), minPath.move, minPath.move - 1, insect.getCount()));
       }
     }
 
     if (this.turns++ < this.numDowns) {
-      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), C.Move.DOWN, Math.floor(Math.random() * 4), 1));
+      moves.push(new Action(queenBeeCell.getPosition(), C.Move.DOWN, Math.floor(Math.random() * 4), 1));
     } else {
-      moves.push(new Action(queenBeeCell.getX(), queenBeeCell.getY(), C.Move.STAY, C.Face.LEFT, 1));
+      moves.push(new Action(queenBeeCell.getPosition(), C.Move.STAY, C.Face.LEFT, 1));
     }
 
     return moves;

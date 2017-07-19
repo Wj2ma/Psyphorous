@@ -1,18 +1,14 @@
 exports.Action = class Action {
-  constructor(x, y, move, face, amount) {
-    this.x = x;
-    this.y = y;
+  constructor(pos, move, face, amount) {
+    this.x = pos.x;
+    this.y = pos.y;
     this.move = move;
     this.face = face;
     this.amount = Math.round(amount);
   }
 
-  getX() {
-    return this.x;
-  }
-
-  getY() {
-    return this.y;
+  getPosition() {
+    return { x: this.pos.x, y: this.pos.y };
   }
 
   getMove() {

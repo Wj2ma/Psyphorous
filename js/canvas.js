@@ -95,8 +95,8 @@ class Canvas {
   load(replay) {
     cancelAnimationFrame(this.animationFrame);
     clearTimeout(this.animateEvent);
-    this.xStep = this.width / replay.m.length;
-    this.yStep = this.height / replay.m[0].length;
+    this.xStep = this.width / replay.m[0].length;
+    this.yStep = this.height / replay.m.length;
     this.insectSize = Math.min(this.xStep / 2 - 8, this.yStep / 2 - 8);
     this.map = replay.m;
     this.turns = replay.t;

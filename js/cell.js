@@ -14,7 +14,7 @@ exports.Cell =  class Cell {
   }
 
   getPosition() {
-    return this.pos;
+    return { x: this.pos.x, y: this.pos.y };
   }
 
   clearInsect() {
